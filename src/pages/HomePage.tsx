@@ -87,7 +87,7 @@ export const HomePage: React.FC = () => {
     {
       name: 'Bracelets',
       link: '/shop?category=Bracelets',
-      image: 'https://images.unsplash.com/photo-1611591475155-4284fa2c2e7f?auto=format&fit=crop&w=600&q=80',
+      image: '/images/bracelet-1.jpg',
     },
     {
       name: 'Bangles',
@@ -502,8 +502,16 @@ export const HomePage: React.FC = () => {
                     <div className="relative aspect-square bg-[#0C0A08] overflow-hidden">
                       <Link to={`/product/${prod.id}`} className="block w-full h-full">
                         <img
-                          src={prod.images[0]}
+                          src={prod.images[0] || (prod.category === 'Bracelets' ? '/images/bracelet-1.jpg' : '/images/aurelle_editorial_ring.jpg')}
                           alt={prod.name}
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            if (prod.category === 'Bracelets') {
+                              target.src = '/images/bracelet-1.jpg';
+                            } else {
+                              target.src = '/images/aurelle_editorial_ring.jpg';
+                            }
+                          }}
                           className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-108"
                         />
                       </Link>

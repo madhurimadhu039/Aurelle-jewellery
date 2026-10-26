@@ -55,7 +55,17 @@ export const WishlistPage: React.FC = () => {
             >
               <div className="relative aspect-square bg-black">
                 <Link to={`/product/${product.id}`}>
-                  <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+                  <img
+                    src={product.images[0]}
+                    alt={product.name}
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      if (product.category === 'Bracelets') {
+                        target.src = '/images/bracelet-1.jpg';
+                      }
+                    }}
+                    className="w-full h-full object-cover"
+                  />
                 </Link>
                 <button
                   onClick={() => toggleWishlist(product)}

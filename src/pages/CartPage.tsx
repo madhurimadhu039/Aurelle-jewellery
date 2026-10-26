@@ -152,6 +152,12 @@ export const CartPage: React.FC = () => {
                 <img
                   src={item.product.images[0]}
                   alt={item.product.name}
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    if (item.product.category === 'Bracelets') {
+                      target.src = '/images/bracelet-1.jpg';
+                    }
+                  }}
                   className="w-24 h-24 rounded-lg object-cover bg-black flex-shrink-0"
                 />
 

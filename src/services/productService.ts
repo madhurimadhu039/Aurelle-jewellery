@@ -8,7 +8,38 @@ export const productService = {
     const stored = localStorage.getItem(PRODUCTS_STORAGE_KEY);
     if (stored) {
       try {
-        return JSON.parse(stored);
+        let products: Product[] = JSON.parse(stored);
+        let updated = false;
+
+        // Auto-heal/migrate any stale or broken bracelet image URLs
+        products = products.map((p) => {
+          if (p.id === 'aur-004' || p.category === 'Bracelets') {
+            const hasBroken = !p.images || !p.images.length || p.images.some((img) => img.includes('photo-1611591475155'));
+            if (hasBroken) {
+              updated = true;
+              return {
+                ...p,
+                images: ['/images/bracelet-1.jpg', '/images/bracelet-2.jpg'],
+              };
+            }
+          }
+          if (p.images && p.images.some((img) => img.includes('photo-1611591475155'))) {
+            updated = true;
+            return {
+              ...p,
+              images: p.images.map((img) =>
+                img.includes('photo-1611591475155') ? '/images/bracelet-1.jpg' : img
+              ),
+            };
+          }
+          return p;
+        });
+
+        if (updated) {
+          localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(products));
+        }
+
+        return products;
       } catch (e) {
         console.error('Error reading stored products', e);
       }

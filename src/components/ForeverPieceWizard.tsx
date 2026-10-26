@@ -258,7 +258,17 @@ export const ForeverPieceWizard: React.FC = () => {
                 <div key={prod.id} className="bg-[#16120D] border border-[#2B2319] rounded-xl p-3 flex flex-col justify-between">
                   <div>
                     <div className="relative aspect-square rounded-lg overflow-hidden bg-black mb-2">
-                      <img src={prod.images[0]} alt={prod.name} className="w-full h-full object-cover" />
+                      <img
+                        src={prod.images[0]}
+                        alt={prod.name}
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          if (prod.category === 'Bracelets') {
+                            target.src = '/images/bracelet-1.jpg';
+                          }
+                        }}
+                        className="w-full h-full object-cover"
+                      />
                       <span className="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded bg-[#090806]/80 text-[#D8B47A] border border-[#D8B47A]/30">
                         {98 - idx * 4}% Match
                       </span>

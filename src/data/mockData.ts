@@ -121,8 +121,8 @@ export const MOCK_PRODUCTS: Product[] = [
     price: 175000,
     originalPrice: 190000,
     images: [
-      'https://images.unsplash.com/photo-1611591475155-4284fa2c2e7f?auto=format&fit=crop&w=900&q=80',
-      'https://images.unsplash.com/photo-1598560917505-59a3ad559071?auto=format&fit=crop&w=900&q=80'
+      '/images/bracelet-1.jpg',
+      '/images/bracelet-2.jpg'
     ],
     material: '18K Yellow Gold with Diamonds',
     purity: '18K',
@@ -152,7 +152,7 @@ export const MOCK_PRODUCTS: Product[] = [
     originalPrice: 230000,
     images: [
       'https://images.unsplash.com/photo-1598560917505-59a3ad559071?auto=format&fit=crop&w=900&q=80',
-      'https://images.unsplash.com/photo-1611591475155-4284fa2c2e7f?auto=format&fit=crop&w=900&q=80'
+      'https://images.unsplash.com/photo-1603561591411-07134e71a2a9?auto=format&fit=crop&w=900&q=80'
     ],
     material: 'Pure 22K Solid Gold',
     purity: '22K',
