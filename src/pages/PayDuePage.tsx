@@ -19,6 +19,23 @@ export const PayDuePage: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [payModalOpen, setPayModalOpen] = useState(false);
 
+  // Close modal on Escape key press (unless payment is processing)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && payModalOpen && !isProcessing) {
+        setPayModalOpen(false);
+      }
+    };
+    if (payModalOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'unset';
+    };
+  }, [payModalOpen, isProcessing]);
+
   useEffect(() => {
     if (initialSearch) {
       handleSearch(initialSearch);
@@ -266,12 +283,50 @@ export const PayDuePage: React.FC = () => {
 
       {/* Pay Online Modal */}
       {payModalOpen && record && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
-          <div className="bg-[#120F0B] border border-[#D8B47A]/40 rounded-2xl max-w-md w-full p-6 text-left">
-            <h3 className="font-display-luxury text-base font-bold text-white mb-1">
-              SETTLE OUTSTANDING PAYMENT
-            </h3>
-            <p className="text-xs text-gray-400 mb-4">Invoice: {record.billNumber}</p>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md transition-opacity"
+          onClick={() => {
+            if (!isProcessing) setPayModalOpen(false);
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="pay-modal-title"
+        >
+          <div
+            className="relative bg-[#120F0B] border border-[#D8B47A]/40 rounded-2xl max-w-md w-full p-6 text-left shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Top-Right Close Button with proper multiplication sign × */}
+            <button
+              type="button"
+              id="close-pay-modal-btn"
+              onClick={() => {
+                if (!isProcessing) setPayModalOpen(false);
+              }}
+              disabled={isProcessing}
+              className="absolute top-4 right-4 w-9 h-9 rounded-full bg-[#1A1510] hover:bg-[#251E17] text-[#D8B47A] hover:text-white border border-[#D8B47A]/30 flex items-center justify-center transition-all disabled:opacity-40 disabled:cursor-not-allowed z-20 group focus:outline-none focus:ring-2 focus:ring-[#D8B47A]/50"
+              aria-label="Close popup"
+              title="Close (Esc)"
+            >
+              <span className="text-2xl font-light leading-none select-none group-hover:scale-110 transition-transform" aria-hidden="true">
+                &times;
+              </span>
+            </button>
+
+            {/* Header */}
+            <div className="pr-10 mb-4">
+              <h3 id="pay-modal-title" className="font-serif-luxury text-base sm:text-lg font-bold text-white tracking-wide">
+                SETTLE OUTSTANDING PAYMENT
+              </h3>
+              <p className="text-xs text-[#D8B47A] font-mono mt-0.5">Invoice: {record.billNumber}</p>
+            </div>
+
+            {isProcessing && (
+              <div className="mb-4 p-2.5 rounded-lg bg-[#D8B47A]/10 border border-[#D8B47A]/30 text-xs text-[#D8B47A] flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#D8B47A] animate-ping" />
+                <span>Processing bank gateway reconciliation... Please do not close.</span>
+              </div>
+            )}
 
             <form onSubmit={handlePaySubmit} className="space-y-4 text-xs">
               <div>
@@ -281,9 +336,10 @@ export const PayDuePage: React.FC = () => {
                   min="1"
                   max={record.balanceDue}
                   required
+                  disabled={isProcessing}
                   value={payAmount}
                   onChange={(e) => setPayAmount(parseInt(e.target.value) || 0)}
-                  className="w-full bg-[#18140F] border border-[#2B2319] rounded p-2.5 text-sm font-bold text-white"
+                  className="w-full bg-[#18140F] border border-[#2B2319] rounded p-2.5 text-sm font-bold text-white focus:outline-none focus:border-[#D8B47A] disabled:opacity-50"
                 />
                 <span className="text-[11px] text-gray-500 mt-1 block">
                   Remaining balance after payment: {formatINR(Math.max(0, record.balanceDue - payAmount))}
@@ -297,12 +353,13 @@ export const PayDuePage: React.FC = () => {
                     <button
                       key={m}
                       type="button"
+                      disabled={isProcessing}
                       onClick={() => setPaymentMode(m)}
-                      className={`p-2 rounded text-center border font-medium ${
+                      className={`p-2 rounded text-center border font-medium transition-colors ${
                         paymentMode === m
                           ? 'bg-[#D8B47A] text-[#090806] border-[#D8B47A]'
-                          : 'bg-[#18140F] text-gray-300 border-[#2B2319]'
-                      }`}
+                          : 'bg-[#18140F] text-gray-300 border-[#2B2319] hover:border-[#D8B47A]/40'
+                      } disabled:opacity-50`}
                     >
                       {m}
                     </button>
@@ -313,15 +370,16 @@ export const PayDuePage: React.FC = () => {
               <div className="pt-4 border-t border-[#241F18] flex justify-between items-center">
                 <button
                   type="button"
+                  disabled={isProcessing}
                   onClick={() => setPayModalOpen(false)}
-                  className="text-gray-400 hover:text-white"
+                  className="text-gray-400 hover:text-white disabled:opacity-40"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={isProcessing}
-                  className="px-6 py-2.5 rounded-lg bg-[#D8B47A] text-[#090806] font-bold uppercase tracking-wider hover:bg-[#EBD5A8] disabled:opacity-50"
+                  disabled={isProcessing || payAmount <= 0}
+                  className="px-6 py-2.5 rounded-lg bg-[#D8B47A] text-[#090806] font-bold uppercase tracking-wider hover:bg-[#EBD5A8] disabled:opacity-50 shadow-lg transition-all"
                 >
                   {isProcessing ? 'Processing Payment...' : `Confirm Payment of ${formatINR(payAmount)}`}
                 </button>

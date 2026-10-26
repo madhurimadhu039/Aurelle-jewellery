@@ -9,13 +9,16 @@ import {
   ShieldCheck, 
   Calendar,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  AlertCircle,
+  Receipt
 } from 'lucide-react';
 import { GoldRateBanner } from '../components/GoldRateBanner';
 import { VirtualTryOnModal } from '../components/VirtualTryOnModal';
 import { useApp } from '../contexts/AppContext';
 import { productService } from '../services/productService';
-import { Product } from '../types';
+import { payDueService } from '../services/payDueService';
+import { Product, PayDueRecord } from '../types';
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -24,6 +27,31 @@ export const HomePage: React.FC = () => {
   const [heroSlide, setHeroSlide] = useState(0);
   const [payDueQuery, setPayDueQuery] = useState('');
   const [tryOnProduct, setTryOnProduct] = useState<Product | null>(null);
+
+  // Pay Due & Verified Record Modal State
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [statusRecord, setStatusRecord] = useState<PayDueRecord | undefined>(undefined);
+  const [statusQuery, setStatusQuery] = useState('');
+  const [statusSearched, setStatusSearched] = useState(false);
+  const [isVerifiedRecordView, setIsVerifiedRecordView] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  // Close status modal on Escape key press
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && statusModalOpen && !isVerifying) {
+        setStatusModalOpen(false);
+      }
+    };
+    if (statusModalOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'unset';
+    };
+  }, [statusModalOpen, isVerifying]);
 
   // Hero slides data
   const heroSlides = [
@@ -107,11 +135,22 @@ export const HomePage: React.FC = () => {
 
   const handlePayDueSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (payDueQuery.trim()) {
-      navigate(`/pay-due?search=${encodeURIComponent(payDueQuery.trim())}`);
-    } else {
-      navigate('/pay-due');
-    }
+    const query = payDueQuery.trim();
+    setStatusQuery(query);
+    setStatusSearched(true);
+    setIsVerifiedRecordView(false);
+    const found = payDueService.findByQuery(query);
+    setStatusRecord(found);
+    setStatusModalOpen(true);
+  };
+
+  const handleOpenVerifiedRecord = () => {
+    if (isVerifying || !statusRecord) return;
+    setIsVerifying(true);
+    setTimeout(() => {
+      setIsVerifiedRecordView(true);
+      setIsVerifying(false);
+    }, 200);
   };
 
   const currentHero = heroSlides[heroSlide];
@@ -655,6 +694,341 @@ export const HomePage: React.FC = () => {
           product={tryOnProduct}
           onClose={() => setTryOnProduct(null)}
         />
+      )}
+
+      {/* ======================================================== */}
+      {/* Check Status & Verified Record Modal */}
+      {/* ======================================================== */}
+      {statusModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md transition-opacity"
+          onClick={() => {
+            if (!isVerifying) setStatusModalOpen(false);
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="status-modal-title"
+        >
+          <div
+            className="relative bg-[#110E0B] border border-[#D8B47A]/40 rounded-2xl max-w-xl w-full p-6 sm:p-7 text-left shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Top-Right Close Button with proper multiplication sign × */}
+            <button
+              type="button"
+              id="close-status-modal-btn"
+              onClick={() => {
+                if (!isVerifying) setStatusModalOpen(false);
+              }}
+              disabled={isVerifying}
+              className="absolute top-4 right-4 w-9 h-9 rounded-full bg-[#1A1510] hover:bg-[#251E17] text-[#D8B47A] hover:text-white border border-[#D8B47A]/30 flex items-center justify-center transition-all disabled:opacity-40 disabled:cursor-not-allowed z-20 group focus:outline-none focus:ring-2 focus:ring-[#D8B47A]/50"
+              aria-label="Close popup"
+              title="Close (Esc)"
+            >
+              <span className="text-2xl font-light leading-none select-none group-hover:scale-110 transition-transform" aria-hidden="true">
+                &times;
+              </span>
+            </button>
+
+            {/* Modal Header */}
+            <div className="pr-10 mb-5 border-b border-[#241F18] pb-4">
+              <div className="flex items-center gap-2 text-[#D8B47A] text-[11px] font-bold uppercase tracking-wider mb-1">
+                <ShieldCheck className="w-4 h-4" />
+                <span>Aurelle Ledger & Status Verification</span>
+              </div>
+              <h3 id="status-modal-title" className="font-serif-luxury text-xl sm:text-2xl font-medium text-white">
+                {isVerifiedRecordView ? 'Verified Jewellery Record' : 'Payment & Due Status'}
+              </h3>
+            </div>
+
+            {/* Case 1: No matching record found */}
+            {!statusRecord ? (
+              <div className="space-y-4 py-2">
+                <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-start gap-3 text-xs text-rose-200">
+                  <AlertCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h5 className="font-semibold text-white text-sm">No Record Found</h5>
+                    <p className="mt-1 text-gray-300">
+                      No matching jewellery order or invoice was found for: <strong className="text-rose-300">&quot;{statusQuery || 'empty'}&quot;</strong>
+                    </p>
+                    <p className="mt-1 text-gray-400 text-[11px]">
+                      Please verify your Order ID (e.g. <code>AUR-INV-2026-8941</code>) or your registered 10-digit mobile number.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Inline Re-search Form */}
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const q = payDueQuery.trim();
+                    setStatusQuery(q);
+                    setStatusSearched(true);
+                    setIsVerifiedRecordView(false);
+                    setStatusRecord(payDueService.findByQuery(q));
+                  }}
+                  className="space-y-2 pt-2"
+                >
+                  <label className="text-xs text-gray-400 block">Search with another Order ID or Mobile Number:</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="e.g. AUR-INV-2026-8941"
+                      value={payDueQuery}
+                      onChange={(e) => setPayDueQuery(e.target.value)}
+                      className="flex-1 bg-[#18140F] border border-[#2B2319] rounded-lg px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#D8B47A]"
+                    />
+                    <button
+                      type="submit"
+                      className="px-4 py-2 rounded-lg bg-[#D8B47A] hover:bg-[#EBD5A8] text-[#090806] text-xs font-bold uppercase tracking-wider"
+                    >
+                      Search
+                    </button>
+                  </div>
+                </form>
+
+                {/* Quick Sample Lookups */}
+                <div className="pt-2 border-t border-[#241F18]">
+                  <span className="text-[11px] text-gray-400 block mb-2">Or test with demo order records:</span>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPayDueQuery('AUR-INV-2026-8941');
+                        setStatusQuery('AUR-INV-2026-8941');
+                        setStatusSearched(true);
+                        setIsVerifiedRecordView(false);
+                        setStatusRecord(payDueService.findByQuery('AUR-INV-2026-8941'));
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-[#18140F] border border-[#2B2319] hover:border-[#D8B47A] text-[11px] text-[#D8B47A]"
+                    >
+                      AUR-INV-2026-8941 (Partially Paid)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPayDueQuery('AUR-INV-2026-9023');
+                        setStatusQuery('AUR-INV-2026-9023');
+                        setStatusSearched(true);
+                        setIsVerifiedRecordView(false);
+                        setStatusRecord(payDueService.findByQuery('AUR-INV-2026-9023'));
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-[#18140F] border border-[#2B2319] hover:border-[#D8B47A] text-[11px] text-gray-300"
+                    >
+                      AUR-INV-2026-9023 (Pending / Unverified)
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : !isVerifiedRecordView ? (
+              /* Case 2: Matching record found — Standard Status View */
+              <div className="space-y-4">
+                {/* Status Badge & Bill ID */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3.5 rounded-xl bg-[#18140F] border border-[#2B2319]">
+                  <div>
+                    <span className="text-[10px] text-gray-400 uppercase tracking-wider block">Invoice Reference</span>
+                    <span className="font-mono font-bold text-white text-sm">{statusRecord.billNumber}</span>
+                  </div>
+                  <div>
+                    {statusRecord.status === 'PAID' && (
+                      <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-[#10B981]/20 text-[#34D399] border border-[#10B981]/40">
+                        Fully Settled (Paid)
+                      </span>
+                    )}
+                    {statusRecord.status === 'PARTIALLY_PAID' && (
+                      <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-[#F59E0B]/20 text-[#FBBF24] border border-[#F59E0B]/40">
+                        Partially Paid
+                      </span>
+                    )}
+                    {statusRecord.status === 'PENDING' && (
+                      <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                        Pending Payment
+                      </span>
+                    )}
+                    {statusRecord.status === 'OVERDUE' && (
+                      <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-red-600/20 text-red-400 border border-red-500/40">
+                        Payment Overdue
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Customer and Order Summary */}
+                <div className="space-y-1 text-xs">
+                  <div className="text-gray-400">
+                    Customer: <strong className="text-white">{statusRecord.customerName}</strong> ({statusRecord.customerPhone})
+                  </div>
+                  <div className="text-gray-400">
+                    Jewellery: <strong className="text-white">{statusRecord.orderSummary}</strong>
+                  </div>
+                </div>
+
+                {/* Amounts Breakdown */}
+                <div className="grid grid-cols-3 gap-2.5 py-2">
+                  <div className="p-3 rounded-xl bg-[#18140F] border border-[#241F18]">
+                    <span className="text-[10px] text-gray-400 block uppercase">Total Invoice</span>
+                    <span className="font-bold text-white text-xs sm:text-sm mt-0.5 block">{formatINR(statusRecord.totalAmount)}</span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-[#18140F] border border-[#241F18]">
+                    <span className="text-[10px] text-gray-400 block uppercase">Paid to Date</span>
+                    <span className="font-bold text-[#34D399] text-xs sm:text-sm mt-0.5 block">{formatINR(statusRecord.amountPaid)}</span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-[#18140F] border border-[#241F18]">
+                    <span className="text-[10px] text-gray-400 block uppercase">Balance Due</span>
+                    <span className="font-extrabold text-[#D8B47A] text-xs sm:text-sm mt-0.5 block">{formatINR(statusRecord.balanceDue)}</span>
+                  </div>
+                </div>
+
+                {/* Actions: Verified Record button & Pay Due link */}
+                <div className="pt-3 border-t border-[#241F18] flex flex-col sm:flex-row gap-3">
+                  {/* The Verified Record Button */}
+                  <button
+                    type="button"
+                    id="verified-record-btn"
+                    onClick={handleOpenVerifiedRecord}
+                    disabled={isVerifying}
+                    className="flex-1 py-3 px-4 rounded-xl bg-[#18140F] hover:bg-[#251E17] border border-[#D8B47A] text-[#D8B47A] hover:text-[#EBD5A8] text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all disabled:opacity-50"
+                  >
+                    <ShieldCheck className="w-4 h-4 text-[#D8B47A]" />
+                    <span>{isVerifying ? 'Verifying Record...' : 'Verified Record'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStatusModalOpen(false);
+                      navigate(`/pay-due?search=${encodeURIComponent(statusRecord.billNumber)}`);
+                    }}
+                    className="flex-1 py-3 px-4 rounded-xl bg-[#D8B47A] hover:bg-[#EBD5A8] text-[#090806] text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all"
+                  >
+                    <span>Open in Pay Due Portal</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Case 3: Verified Record Detailed View */
+              <div className="space-y-4">
+                {/* Official Verification Audit Seal Banner */}
+                <div
+                  className={`p-3.5 rounded-xl border text-xs flex items-start gap-3 ${
+                    statusRecord.status === 'PAID'
+                      ? 'bg-[#10B981]/10 border-[#10B981]/40 text-[#34D399]'
+                      : statusRecord.status === 'PARTIALLY_PAID'
+                      ? 'bg-[#F59E0B]/10 border-[#F59E0B]/40 text-[#FBBF24]'
+                      : 'bg-rose-500/10 border-rose-500/40 text-rose-300'
+                  }`}
+                >
+                  <ShieldCheck className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h5 className="font-bold text-sm tracking-wide text-white">
+                      {statusRecord.status === 'PAID'
+                        ? 'VERIFIED & RECONCILED RECORD (100% SETTLED)'
+                        : statusRecord.status === 'PARTIALLY_PAID'
+                        ? 'PARTIALLY VERIFIED RECORD (RECONCILED PAYMENTS)'
+                        : 'UNVERIFIED RECORD / PAYMENT PENDING'}
+                    </h5>
+                    <p className="mt-1 text-xs opacity-90">
+                      {statusRecord.status === 'PAID'
+                        ? `All payments totalling ${formatINR(statusRecord.totalAmount)} are 100% verified and reconciled with the Aurelle Guild Ledger.`
+                        : statusRecord.status === 'PARTIALLY_PAID'
+                        ? `Verified payments of ${formatINR(statusRecord.amountPaid)} recorded with bank confirmation. An outstanding balance of ${formatINR(statusRecord.balanceDue)} remains unverified and due by ${statusRecord.dueDate}.`
+                        : `This order is recorded in the boutique database, but zero payments have been verified. An initial deposit or full settlement is required to verify the piece.`}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Verified Metadata Grid */}
+                <div className="bg-[#18140F] border border-[#241F18] rounded-xl p-4 text-xs space-y-2">
+                  <div className="flex justify-between items-center py-1 border-b border-[#241F18]">
+                    <span className="text-gray-400">Customer Name</span>
+                    <strong className="text-white">{statusRecord.customerName}</strong>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-[#241F18]">
+                    <span className="text-gray-400">Order Reference</span>
+                    <span className="font-mono text-[#D8B47A]">{statusRecord.billNumber}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-[#241F18]">
+                    <span className="text-gray-400">Jewellery Item</span>
+                    <span className="text-white text-right max-w-xs">{statusRecord.orderSummary}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-[#241F18]">
+                    <span className="text-gray-400">Total Invoice</span>
+                    <span className="text-white font-semibold">{formatINR(statusRecord.totalAmount)}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-[#241F18]">
+                    <span className="text-gray-400">Verified Paid Amount</span>
+                    <span className="text-[#34D399] font-bold">{formatINR(statusRecord.amountPaid)}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-gray-400">Outstanding Balance</span>
+                    <span className="text-[#D8B47A] font-extrabold">{formatINR(statusRecord.balanceDue)}</span>
+                  </div>
+                </div>
+
+                {/* Verified Receipts History */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-400 uppercase font-bold tracking-wider flex items-center gap-1.5 text-[11px]">
+                      <Receipt className="w-3.5 h-3.5 text-[#D8B47A]" />
+                      <span>Verified Payment Receipts ({statusRecord.paymentsHistory.length})</span>
+                    </span>
+                    <span className="text-[10px] text-gray-500">AES-256 Vault Verified</span>
+                  </div>
+
+                  {statusRecord.paymentsHistory.length === 0 ? (
+                    <div className="p-3 rounded-lg bg-[#18140F] border border-[#241F18] text-center text-xs text-gray-500">
+                      No payment receipts have been verified or recorded yet for this invoice.
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                      {statusRecord.paymentsHistory.map((receipt) => (
+                        <div
+                          key={receipt.id}
+                          className="p-2.5 rounded-lg bg-[#18140F] border border-[#241F18] flex items-center justify-between text-xs"
+                        >
+                          <div>
+                            <span className="font-mono font-bold text-white text-[11px]">{receipt.receiptNumber}</span>
+                            <div className="text-[10px] text-gray-400 mt-0.5">
+                              {receipt.date} • {receipt.paymentMode}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className="font-bold text-[#34D399]">{formatINR(receipt.amount)}</span>
+                            <span className="text-[9px] block text-[#10B981] font-semibold">VERIFIED</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="pt-3 border-t border-[#241F18] flex flex-col sm:flex-row gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setIsVerifiedRecordView(false)}
+                    className="py-2.5 px-4 rounded-xl bg-[#18140F] hover:bg-[#251E17] border border-[#2B2319] text-gray-300 text-xs font-semibold"
+                  >
+                    ← Back to Summary
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStatusModalOpen(false);
+                      navigate(`/pay-due?search=${encodeURIComponent(statusRecord.billNumber)}`);
+                    }}
+                    className="flex-1 py-2.5 px-4 rounded-xl bg-[#D8B47A] hover:bg-[#EBD5A8] text-[#090806] text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-lg transition-all"
+                  >
+                    <span>{statusRecord.balanceDue > 0 ? `Pay Balance (${formatINR(statusRecord.balanceDue)})` : 'Open in Pay Due Portal'}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
     </div>
