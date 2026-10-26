@@ -884,13 +884,23 @@ export const HomePage: React.FC = () => {
                   {/* The Verified Record Button */}
                   <button
                     type="button"
-                    id="verified-record-btn"
+                    id="verify-record-btn"
+                    data-testid="verify-record-btn"
                     onClick={handleOpenVerifiedRecord}
                     disabled={isVerifying}
-                    className="flex-1 py-3 px-4 rounded-xl bg-[#18140F] hover:bg-[#251E17] border border-[#D8B47A] text-[#D8B47A] hover:text-[#EBD5A8] text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all disabled:opacity-50"
+                    className="flex-1 py-3 px-4 rounded-xl bg-[#18140F] hover:bg-[#251E17] border border-[#D8B47A] text-[#D8B47A] hover:text-[#EBD5A8] text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
                   >
-                    <ShieldCheck className="w-4 h-4 text-[#D8B47A]" />
-                    <span>{isVerifying ? 'Verifying Record...' : 'Verified Record'}</span>
+                    {isVerifying ? (
+                      <>
+                        <span className="w-4 h-4 border-2 border-[#D8B47A] border-t-transparent rounded-full animate-spin" />
+                        <span>Verifying...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck className="w-4 h-4 text-[#D8B47A]" />
+                        <span>Verify Record</span>
+                      </>
+                    )}
                   </button>
 
                   <button

@@ -18,14 +18,66 @@ export const payDueService = {
   },
 
   findByQuery: (query: string): PayDueRecord | undefined => {
+    if (!query || typeof query !== 'string') return undefined;
     const cleaned = query.trim().toLowerCase();
+    if (!cleaned) return undefined;
+
+    const queryDigits = cleaned.replace(/\D/g, '');
     const records = payDueService.getAll();
-    return records.find(
-      (r) =>
-        r.billNumber.toLowerCase() === cleaned ||
-        r.customerPhone.includes(cleaned) ||
-        r.customerEmail.toLowerCase() === cleaned
-    );
+
+    return records.find((r) => {
+      // 1. Exact or partial bill number
+      const bill = r.billNumber.toLowerCase();
+      if (bill === cleaned || bill.includes(cleaned)) return true;
+
+      // 2. Order summary reference (e.g. AUR-9842 or 9842)
+      const order = r.orderSummary.toLowerCase();
+      if (order.includes(cleaned)) return true;
+
+      // 3. Record internal ID
+      if (r.id.toLowerCase() === cleaned) return true;
+
+      // 4. Customer Phone with flexible digit matching
+      const recordDigits = r.customerPhone.replace(/\D/g, '');
+      if (queryDigits.length >= 4) {
+        if (recordDigits === queryDigits || recordDigits.endsWith(queryDigits) || queryDigits.endsWith(recordDigits)) {
+          return true;
+        }
+      }
+      if (r.customerPhone.includes(cleaned)) return true;
+
+      // 5. Customer Email
+      if (r.customerEmail && r.customerEmail.toLowerCase().includes(cleaned)) return true;
+
+      // 6. Customer Name
+      if (r.customerName && r.customerName.toLowerCase().includes(cleaned)) return true;
+
+      return false;
+    });
+  },
+
+  verifyRecord: async (query: string): Promise<{ success: boolean; record?: PayDueRecord; error?: string }> => {
+    if (!query || !query.trim()) {
+      return { success: false, error: 'Please enter a valid Invoice ID, Order No., or registered Mobile No.' };
+    }
+
+    const trimmed = query.trim();
+    if (trimmed.length < 3) {
+      return { success: false, error: 'Reference must be at least 3 characters long.' };
+    }
+
+    // Small async verification latency to allow UI feedback and avoid instant flash
+    await new Promise((resolve) => setTimeout(resolve, 450));
+
+    const found = payDueService.findByQuery(trimmed);
+    if (!found) {
+      return {
+        success: false,
+        error: `No matching record found for "${trimmed}". Please check the reference on your purchase bill.`,
+      };
+    }
+
+    return { success: true, record: found };
   },
 
   recordPayment: (recordId: string, amount: number, paymentMode: string): PayDueRecord => {

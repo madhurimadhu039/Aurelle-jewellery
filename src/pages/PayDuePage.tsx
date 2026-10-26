@@ -10,10 +10,13 @@ export const PayDuePage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { formatINR, showToast } = useApp();
 
-  const initialSearch = searchParams.get('search') || 'AUR-INV-2026-8941';
+  const initialSearch = searchParams.get('search') || '';
   const [query, setQuery] = useState(initialSearch);
   const [record, setRecord] = useState<PayDueRecord | undefined>(undefined);
   const [hasSearched, setHasSearched] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationSuccess, setVerificationSuccess] = useState<string | null>(null);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
   const [payAmount, setPayAmount] = useState<number>(0);
   const [paymentMode, setPaymentMode] = useState('UPI');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -38,16 +41,47 @@ export const PayDuePage: React.FC = () => {
 
   useEffect(() => {
     if (initialSearch) {
-      handleSearch(initialSearch);
+      handleVerifyRecord(initialSearch);
     }
   }, [initialSearch]);
 
-  const handleSearch = (searchVal: string) => {
+  const handleVerifyRecord = async (searchVal: string) => {
+    const trimmed = (searchVal || '').trim();
+    if (!trimmed) {
+      setVerificationError('Please enter a valid Invoice ID (e.g. AUR-INV-2026-8941), Order reference, or registered Mobile No.');
+      setVerificationSuccess(null);
+      setRecord(undefined);
+      return;
+    }
+
+    if (trimmed.length < 3) {
+      setVerificationError('Reference must be at least 3 characters long.');
+      setVerificationSuccess(null);
+      setRecord(undefined);
+      return;
+    }
+
+    setIsVerifying(true);
+    setVerificationError(null);
+    setVerificationSuccess(null);
     setHasSearched(true);
-    const found = payDueService.findByQuery(searchVal);
-    setRecord(found);
-    if (found) {
-      setPayAmount(found.balanceDue);
+
+    try {
+      const result = await payDueService.verifyRecord(trimmed);
+      if (result.success && result.record) {
+        setRecord(result.record);
+        setPayAmount(result.record.balanceDue);
+        setVerificationSuccess(`Record successfully verified with Aurelle Guild Registry for ${result.record.billNumber}`);
+        showToast(`Record verified: ${result.record.billNumber}`, 'success');
+      } else {
+        setRecord(undefined);
+        setVerificationError(result.error || `No verified invoice found matching "${trimmed}". Please check the reference on your bill.`);
+      }
+    } catch (e: any) {
+      setRecord(undefined);
+      setVerificationError(e.message || 'Verification service error. Please try again.');
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -106,7 +140,9 @@ export const PayDuePage: React.FC = () => {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              handleSearch(query);
+              if (!isVerifying) {
+                handleVerifyRecord(query);
+              }
             }}
             className="flex flex-col sm:flex-row gap-3"
           >
@@ -114,42 +150,81 @@ export const PayDuePage: React.FC = () => {
               <Search className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                required
                 placeholder="Enter Invoice / Bill No (e.g. AUR-INV-2026-8941) or Mobile No"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="w-full bg-[#18140F] border border-[#2C2720] rounded-xl pl-11 pr-4 py-3 text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#D8B47A]"
+                disabled={isVerifying}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  if (verificationError) setVerificationError(null);
+                }}
+                className="w-full bg-[#18140F] border border-[#2C2720] rounded-xl pl-11 pr-4 py-3 text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#D8B47A] disabled:opacity-50"
               />
             </div>
             <button
               type="submit"
-              className="px-8 py-3 rounded-xl bg-[#D8B47A] hover:bg-[#EBD5A8] text-[#090806] text-xs font-bold uppercase tracking-wider transition-colors shadow-lg shadow-[#D8B47A]/15"
+              id="verify-record-btn"
+              data-testid="verify-record-btn"
+              disabled={isVerifying}
+              className="px-8 py-3 rounded-xl bg-[#D8B47A] hover:bg-[#EBD5A8] text-[#090806] text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-[#D8B47A]/15 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
             >
-              Verify Record
+              {isVerifying ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-[#090806] border-t-transparent rounded-full animate-spin" />
+                  <span>Verifying...</span>
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Verify Record</span>
+                </>
+              )}
             </button>
           </form>
 
+          {/* Verification Feedback Banners */}
+          {verificationSuccess && (
+            <div className="mt-4 p-3.5 rounded-xl bg-[#10B981]/10 border border-[#10B981]/40 text-[#34D399] text-xs flex items-center gap-2.5">
+              <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+              <div>
+                <strong className="block font-semibold">Verification Successful</strong>
+                <span>{verificationSuccess}</span>
+              </div>
+            </div>
+          )}
+
+          {verificationError && (
+            <div className="mt-4 p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-2.5">
+              <AlertCircle className="w-5 h-5 text-rose-400 flex-shrink-0" />
+              <div>
+                <strong className="block font-semibold">Verification Notice</strong>
+                <span>{verificationError}</span>
+              </div>
+            </div>
+          )}
+
           {/* Quick Demo Pill buttons */}
-          <div className="mt-3 flex items-center gap-2 text-xs text-gray-400">
+          <div className="mt-3 flex items-center gap-2 text-xs text-gray-400 flex-wrap">
             <span>Quick sample bills:</span>
             <button
               type="button"
+              disabled={isVerifying}
               onClick={() => {
                 setQuery('AUR-INV-2026-8941');
-                handleSearch('AUR-INV-2026-8941');
+                handleVerifyRecord('AUR-INV-2026-8941');
               }}
-              className="text-[#D8B47A] hover:underline"
+              className="text-[#D8B47A] hover:underline disabled:opacity-50"
             >
               AUR-INV-2026-8941 (Partially Paid)
             </button>
             <span>•</span>
             <button
               type="button"
+              disabled={isVerifying}
               onClick={() => {
                 setQuery('AUR-INV-2026-9023');
-                handleSearch('AUR-INV-2026-9023');
+                handleVerifyRecord('AUR-INV-2026-9023');
               }}
-              className="text-[#D8B47A] hover:underline"
+              className="text-[#D8B47A] hover:underline disabled:opacity-50"
             >
               AUR-INV-2026-9023 (Pending)
             </button>
@@ -159,6 +234,34 @@ export const PayDuePage: React.FC = () => {
         {/* Search Result Record Display */}
         {record ? (
           <div className="space-y-6">
+            {/* Official Verification Audit Seal Banner */}
+            <div
+              className={`p-4 rounded-xl border text-xs flex items-start gap-3 ${
+                record.status === 'PAID'
+                  ? 'bg-[#10B981]/10 border-[#10B981]/40 text-[#34D399]'
+                  : record.status === 'PARTIALLY_PAID'
+                  ? 'bg-[#F59E0B]/10 border-[#F59E0B]/40 text-[#FBBF24]'
+                  : 'bg-rose-500/10 border-rose-500/40 text-rose-300'
+              }`}
+            >
+              <ShieldCheck className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <div>
+                <h5 className="font-bold text-sm tracking-wide text-white">
+                  {record.status === 'PAID'
+                    ? 'VERIFIED & RECONCILED RECORD (100% SETTLED)'
+                    : record.status === 'PARTIALLY_PAID'
+                    ? 'PARTIALLY VERIFIED RECORD (RECONCILED PAYMENTS)'
+                    : 'UNVERIFIED RECORD / PAYMENT PENDING'}
+                </h5>
+                <p className="mt-1 text-xs opacity-90">
+                  {record.status === 'PAID'
+                    ? `All payments totalling ${formatINR(record.totalAmount)} are verified and reconciled against bank and IBJA guild clearing.`
+                    : record.status === 'PARTIALLY_PAID'
+                    ? `Verified payments of ${formatINR(record.amountPaid)} recorded with gateway confirmation. Outstanding balance of ${formatINR(record.balanceDue)} remains due by ${record.dueDate}.`
+                    : `Order recorded in boutique system, but zero payments verified. Deposit or settlement required.`}
+                </p>
+              </div>
+            </div>
             {/* Main Bill Card */}
             <div className="bg-[#120F0B] border border-[#2B2319] rounded-2xl p-6 relative overflow-hidden">
               <div className="flex flex-col sm:flex-row justify-between sm:items-center pb-4 border-b border-[#241F18] gap-3">
