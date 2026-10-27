@@ -18,7 +18,13 @@ import {
   LogOut,
   AlertTriangle,
   Upload,
-  Sparkles
+  Sparkles,
+  RefreshCw,
+  Sliders,
+  Database,
+  ShieldCheck,
+  Clock,
+  Radio
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { productService } from '../services/productService';
@@ -71,11 +77,24 @@ export const AdminPage: React.FC = () => {
   // Modal ref for accessibility
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // Bullion rates manual editor
+  // Bullion rates provider & override management
+  const [providerConfig, setProviderConfig] = useState(() => rateService.getProviderConfig());
   const [edit22k, setEdit22k] = useState(rates.gold22k);
   const [edit24k, setEdit24k] = useState(rates.gold24k);
   const [editSilver, setEditSilver] = useState(rates.silver1g);
+  const [overrideReason, setOverrideReason] = useState(rates.overrideReason || '');
   const [updatingRates, setUpdatingRates] = useState(false);
+  const [refreshingProvider, setRefreshingProvider] = useState(false);
+  const [savingConfig, setSavingConfig] = useState(false);
+
+  useEffect(() => {
+    setEdit22k(rates.gold22k);
+    setEdit24k(rates.gold24k);
+    setEditSilver(rates.silver1g);
+    if (rates.overrideReason) {
+      setOverrideReason(rates.overrideReason);
+    }
+  }, [rates]);
 
   // Pay Dues
   const [payDues, setPayDues] = useState<PayDueRecord[]>(() => payDueService.getAll());
@@ -260,21 +279,71 @@ export const AdminPage: React.FC = () => {
     }
   };
 
-  // Update Bullion Rates
-  const handleUpdateRates = async (e: React.FormEvent) => {
+  // Manual Live Feed Refresh
+  const handleRefreshLiveFeed = async () => {
+    setRefreshingProvider(true);
+    try {
+      const res = await rateService.refreshLiveRates(true);
+      showToast(`Bullion feed updated: ${res.message}`, 'success');
+    } catch (err: any) {
+      showToast('Failed to refresh bullion feed: ' + (err?.message || err), 'error');
+    } finally {
+      setRefreshingProvider(false);
+    }
+  };
+
+  // Save Provider Configuration
+  const handleSaveProviderConfig = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSavingConfig(true);
+    try {
+      const saved = rateService.setProviderConfig(providerConfig);
+      setProviderConfig(saved);
+      showToast('Bullion provider configuration saved successfully', 'success');
+    } catch (err: any) {
+      showToast('Failed to save provider configuration: ' + (err?.message || err), 'error');
+    } finally {
+      setSavingConfig(false);
+    }
+  };
+
+  // Enforce Manual Rate Override
+  const handleEnforceOverride = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!overrideReason.trim()) {
+      showToast('Mandatory audit reason required to enforce a manual rate override.', 'error');
+      return;
+    }
     setUpdatingRates(true);
     try {
-      await rateService.updateRates({
+      await rateService.setManualOverride({
         gold22k: Number(edit22k),
         gold24k: Number(edit24k),
         silver1g: Number(editSilver),
+        reason: overrideReason.trim(),
+        adminName: user?.name || user?.email || 'Authorized Administrator',
       });
-      showToast('Store benchmark bullion rates broadcast system-wide!', 'success');
+      showToast('Manual bullion override broadcast across system', 'success');
     } catch (err: any) {
-      showToast('Error broadcasting rates: ' + err.message, 'error');
+      showToast('Failed to enforce override: ' + (err?.message || err), 'error');
     } finally {
       setUpdatingRates(false);
+    }
+  };
+
+  // Clear Manual Rate Override
+  const handleClearOverride = async () => {
+    if (window.confirm('Resume automatic live bullion feed and discard manual overrides?')) {
+      setUpdatingRates(true);
+      try {
+        await rateService.clearManualOverride();
+        setOverrideReason('');
+        showToast('Manual override revoked. Automatic live feed resumed.', 'info');
+      } catch (err: any) {
+        showToast('Error revoking override: ' + (err?.message || err), 'error');
+      } finally {
+        setUpdatingRates(false);
+      }
     }
   };
 
@@ -606,61 +675,336 @@ export const AdminPage: React.FC = () => {
           </div>
         )}
 
-        {/* Tab 2: Bullion Rates */}
+        {/* Tab 2: Bullion Rates Suite */}
         {activeTab === 'rates' && (
-          <div className="max-w-2xl bg-[#120F0B] border border-[#2B2319] rounded-2xl p-6 sm:p-8">
-            <h3 className="font-serif-luxury text-2xl font-bold text-white mb-1">
-              Bullion Rate Master Configuration
-            </h3>
-            <p className="text-xs text-gray-400 mb-6">
-              Update official store bullion rates. Changes are saved to Firestore rate snapshots and instantly broadcast across all product price formulas, calculators, and banners.
-            </p>
-
-            <form onSubmit={handleUpdateRates} className="space-y-4 text-xs">
+          <div className="space-y-8">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <label className="text-gray-300 block mb-1 font-medium">22-Carat Gold Rate (₹ / Gram)</label>
-                <input
-                  type="number"
-                  value={edit22k}
-                  onChange={(e) => setEdit22k(parseInt(e.target.value) || 0)}
-                  className="w-full bg-[#18140F] border border-[#2C2720] rounded-lg p-2.5 text-base font-bold text-white"
-                />
-              </div>
-
-              <div>
-                <label className="text-gray-300 block mb-1 font-medium">24-Carat Pure Gold Rate (₹ / Gram)</label>
-                <input
-                  type="number"
-                  value={edit24k}
-                  onChange={(e) => setEdit24k(parseInt(e.target.value) || 0)}
-                  className="w-full bg-[#18140F] border border-[#2C2720] rounded-lg p-2.5 text-base font-bold text-[#D8B47A]"
-                />
-              </div>
-
-              <div>
-                <label className="text-gray-300 block mb-1 font-medium">Silver 999 Rate (₹ / Gram)</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={editSilver}
-                  onChange={(e) => setEditSilver(parseFloat(e.target.value) || 0)}
-                  className="w-full bg-[#18140F] border border-[#2C2720] rounded-lg p-2.5 text-base font-bold text-white"
-                />
-              </div>
-
-              <div className="p-3 bg-[#18140F] border border-[#241F18] rounded-xl text-[11px] text-gray-400 flex items-center justify-between">
-                <span>Last Published: {rates.lastUpdated}</span>
-                <span className="text-[#D8B47A] font-semibold">{rates.provider}</span>
+                <span className="text-[10px] font-bold tracking-[0.25em] uppercase text-[#D8B47A] block mb-1">
+                  BULLION BENCHMARK & PRICING ENGINE
+                </span>
+                <h3 className="font-serif-luxury text-2xl font-bold text-white">
+                  Gold & Silver Master Controls
+                </h3>
+                <p className="text-xs text-gray-400 mt-1 max-w-2xl">
+                  Inspect the live market data feed, configure approved bullion data providers, test manual updates, and enforce audited rate overrides with strict backend synchronization.
+                </p>
               </div>
 
               <button
-                type="submit"
-                disabled={updatingRates}
-                className="w-full py-3 rounded-xl bg-[#D8B47A] hover:bg-[#EBD5A8] text-[#090806] text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
+                type="button"
+                onClick={handleRefreshLiveFeed}
+                disabled={refreshingProvider}
+                className="px-4 py-2.5 rounded-xl bg-[#D8B47A] hover:bg-[#EBD5A8] text-[#090806] text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-lg disabled:opacity-50"
               >
-                {updatingRates ? 'Broadcasting Rates...' : 'Broadcast Rates Across System'}
+                <RefreshCw className={`w-3.5 h-3.5 ${refreshingProvider ? 'animate-spin' : ''}`} />
+                {refreshingProvider ? 'Connecting to Provider...' : 'Check Provider for Updates Now'}
               </button>
-            </form>
+            </div>
+
+            {/* Live Telemetry Card */}
+            <div className="bg-[#120F0B] border border-[#2B2319] rounded-2xl p-6 sm:p-8 shadow-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-6 border-b border-[#241F18]">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#1C1710] border border-[#D8B47A]/40 flex items-center justify-center text-[#D8B47A]">
+                    <Radio className="w-5 h-5 animate-pulse" />
+                  </div>
+                  <div>
+                    <h4 className="font-serif-luxury text-lg font-bold text-white">Live Feed Telemetry</h4>
+                    <span className="text-[11px] text-gray-400">Current bullion benchmark broadcast to store calculators & items</span>
+                  </div>
+                </div>
+
+                {/* Freshness Badge */}
+                <div className="flex items-center gap-2">
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border ${
+                    rates.rateStatus === 'current'
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                      : rates.rateStatus === 'override'
+                      ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
+                      : rates.rateStatus === 'delayed'
+                      ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                      : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                  }`}>
+                    <span className={`w-2 h-2 rounded-full ${
+                      rates.rateStatus === 'current' ? 'bg-emerald-400 animate-ping' :
+                      rates.rateStatus === 'override' ? 'bg-purple-400' :
+                      rates.rateStatus === 'delayed' ? 'bg-amber-400' : 'bg-rose-400'
+                    }`} />
+                    {rates.rateStatus === 'current' && 'Live Market Active'}
+                    {rates.rateStatus === 'override' && 'Admin Override Enforced'}
+                    {rates.rateStatus === 'delayed' && 'Market Closed / Delayed'}
+                    {rates.rateStatus === 'stale' && 'Offline Snapshot Cached'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Rate Metrics 3-Col */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 my-6">
+                <div className="p-4 rounded-xl bg-[#0E0C09] border border-[#221C15]">
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400">22K Standard Gold</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-[#1C1710] text-[#D8B47A] border border-[#D8B47A]/30">91.6% Hallmark</span>
+                  </div>
+                  <div className="font-serif-luxury text-2xl font-bold text-white mb-1">
+                    {formatINR(rates.gold22k)}
+                    <span className="text-xs font-normal text-gray-400 ml-1">/ gram</span>
+                  </div>
+                  <div className="text-[11px] text-gray-400 flex justify-between">
+                    <span>8g Sovereign (Pavan):</span>
+                    <span className="text-[#D8B47A] font-semibold">{formatINR(rates.gold22k * 8)}</span>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-[#0E0C09] border border-[#D8B47A]/40 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-16 h-16 bg-[#D8B47A]/5 rounded-bl-full pointer-events-none" />
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-[#D8B47A]">24K Pure Bullion</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-[#D8B47A]/10 text-[#D8B47A] border border-[#D8B47A]/40 font-bold">99.9% Fine</span>
+                  </div>
+                  <div className="font-serif-luxury text-2xl font-bold text-[#EBD5A8] mb-1">
+                    {formatINR(rates.gold24k)}
+                    <span className="text-xs font-normal text-gray-400 ml-1">/ gram</span>
+                  </div>
+                  <div className="text-[11px] text-gray-400 flex justify-between">
+                    <span>10g Pure Bar:</span>
+                    <span className="text-[#EBD5A8] font-semibold">{formatINR(rates.gold24k * 10)}</span>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-[#0E0C09] border border-[#221C15]">
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Pure Silver</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-[#1C1710] text-gray-300 border border-gray-700">999 Fine</span>
+                  </div>
+                  <div className="font-serif-luxury text-2xl font-bold text-white mb-1">
+                    {formatINR(rates.silver1g)}
+                    <span className="text-xs font-normal text-gray-400 ml-1">/ gram</span>
+                  </div>
+                  <div className="text-[11px] text-gray-400 flex justify-between">
+                    <span>1 Kilogram Bar:</span>
+                    <span className="text-gray-200 font-semibold">{formatINR(Math.round(rates.silver1g * 1000))}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Feed Metadata Bar */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-[#1C1712] text-xs text-gray-400">
+                <div>
+                  <span className="text-[10px] uppercase tracking-wider text-gray-500 block mb-0.5">Active Source / Provider</span>
+                  <span className="text-gray-200 font-medium">{rates.provider || 'Live Indian Bullion Exchange'}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase tracking-wider text-gray-500 block mb-0.5">Last Synchronized</span>
+                  <span className="text-gray-200 font-medium">{rates.dateFormatted} • {rates.timeFormatted}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase tracking-wider text-gray-500 block mb-0.5">Operating Mode</span>
+                  <span className={`font-semibold ${rates.isManualOverride ? 'text-purple-300' : 'text-emerald-400'}`}>
+                    {rates.isManualOverride ? 'Manual Override Active' : 'Automatic Live Exchange'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 2-Column Section: Configuration & Manual Override */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              
+              {/* Card 2: Approved Provider Configuration */}
+              <div className="bg-[#120F0B] border border-[#2B2319] rounded-2xl p-6 sm:p-7 shadow-xl">
+                <div className="flex items-center gap-3 mb-4 pb-3 border-b border-[#241F18]">
+                  <div className="w-8 h-8 rounded-lg bg-[#1C1710] border border-[#D8B47A]/30 flex items-center justify-center text-[#D8B47A]">
+                    <Sliders className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-serif-luxury text-base font-bold text-white">Provider Settings</h4>
+                    <span className="text-[10px] text-gray-400">Configure upstream bullion rates supplier</span>
+                  </div>
+                </div>
+
+                <form onSubmit={handleSaveProviderConfig} className="space-y-4 text-xs">
+                  <div>
+                    <label className="text-gray-300 block mb-1 font-medium">Approved Data Provider</label>
+                    <select
+                      value={providerConfig.providerId}
+                      onChange={(e) => setProviderConfig({ ...providerConfig, providerId: e.target.value as any })}
+                      className="w-full bg-[#18140F] border border-[#2C2720] rounded-lg p-2.5 text-xs text-white"
+                    >
+                      <option value="auto-bullion">
+                        Automated Bullion Exchange Feed (Global Spot converted to INR/g)
+                      </option>
+                      <option value="goldapi">
+                        GoldAPI.io (Live Spot Feed with API Key)
+                      </option>
+                      <option value="ibja-benchmark">
+                        IBJA Benchmark Snapshot (Indian Bullion & Jewellers Association)
+                      </option>
+                    </select>
+                    <p className="text-[10px] text-gray-500 mt-1">
+                      Automated exchange feed fetches live spot rates and converts troy ounces directly to grams in INR.
+                    </p>
+                  </div>
+
+                  {providerConfig.providerId === 'goldapi' && (
+                    <div>
+                      <label className="text-gray-300 block mb-1 font-medium">GoldAPI Key (Optional / Personal)</label>
+                      <input
+                        type="password"
+                        placeholder="goldapi-xxxxxxxxxxxxxxxxx"
+                        value={providerConfig.apiKey || ''}
+                        onChange={(e) => setProviderConfig({ ...providerConfig, apiKey: e.target.value })}
+                        className="w-full bg-[#18140F] border border-[#2C2720] rounded-lg p-2.5 text-xs text-white font-mono"
+                      />
+                      <p className="text-[10px] text-gray-500 mt-1">
+                        Stored securely in application config and never exposed to public customer sessions.
+                      </p>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="text-gray-300 block mb-1 font-medium">Auto-Refresh Cadence</label>
+                    <select
+                      value={providerConfig.autoRefreshMinutes}
+                      onChange={(e) => setProviderConfig({ ...providerConfig, autoRefreshMinutes: Number(e.target.value) })}
+                      className="w-full bg-[#18140F] border border-[#2C2720] rounded-lg p-2.5 text-xs text-white"
+                    >
+                      <option value={15}>Every 15 minutes (High Frequency)</option>
+                      <option value={30}>Every 30 minutes (Recommended Standard)</option>
+                      <option value={60}>Every 60 minutes (Conservative Rate Limits)</option>
+                      <option value={120}>Every 2 hours (Low Bandwidth)</option>
+                    </select>
+                    <p className="text-[10px] text-gray-500 mt-1">
+                      Requests are cached to prevent redundant upstream API quota consumption.
+                    </p>
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      disabled={savingConfig}
+                      className="w-full py-2.5 rounded-lg bg-[#1C1710] hover:bg-[#251E15] text-[#D8B47A] border border-[#D8B47A]/50 text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
+                    >
+                      {savingConfig ? 'Saving Settings...' : 'Save Provider Settings'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* Card 3: Manual Rate Override & Audit Protocol */}
+              <div className="bg-[#120F0B] border border-[#2B2319] rounded-2xl p-6 sm:p-7 shadow-xl">
+                <div className="flex items-center gap-3 mb-4 pb-3 border-b border-[#241F18]">
+                  <div className="w-8 h-8 rounded-lg bg-[#1C1710] border border-[#D8B47A]/30 flex items-center justify-center text-[#D8B47A]">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-serif-luxury text-base font-bold text-white">Manual Rate Override</h4>
+                    <span className="text-[10px] text-gray-400">Strictly audited boutique rate adjustment</span>
+                  </div>
+                </div>
+
+                {/* If override is currently active, show banner */}
+                {rates.isManualOverride && (
+                  <div className="mb-4 p-3.5 rounded-xl bg-purple-950/40 border border-purple-500/40 text-xs text-purple-200">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-bold uppercase tracking-wider text-[10px] text-purple-300">
+                        Active Override in Effect
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleClearOverride}
+                        className="text-[10px] underline font-bold text-purple-300 hover:text-white"
+                      >
+                        Revoke & Resume Live Feed
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-purple-200/90 mb-1">
+                      <strong>Reason:</strong> {rates.overrideReason || 'Admin Manual Override'}
+                    </p>
+                    <p className="text-[10px] text-purple-400">
+                      Applied by {rates.overrideAdmin || 'Administrator'} on {rates.overrideAt || rates.lastUpdated}
+                    </p>
+                  </div>
+                )}
+
+                <form onSubmit={handleEnforceOverride} className="space-y-4 text-xs">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-gray-300 block mb-1 font-medium">22K Gold (₹/g)</label>
+                      <input
+                        type="number"
+                        required
+                        value={edit22k}
+                        onChange={(e) => setEdit22k(parseInt(e.target.value) || 0)}
+                        className="w-full bg-[#18140F] border border-[#2C2720] rounded-lg p-2 text-sm font-bold text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-gray-300 block mb-1 font-medium">24K Gold (₹/g)</label>
+                      <input
+                        type="number"
+                        required
+                        value={edit24k}
+                        onChange={(e) => setEdit24k(parseInt(e.target.value) || 0)}
+                        className="w-full bg-[#18140F] border border-[#2C2720] rounded-lg p-2 text-sm font-bold text-[#D8B47A]"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-gray-300 block mb-1 font-medium">Silver 999 (₹/g)</label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      required
+                      value={editSilver}
+                      onChange={(e) => setEditSilver(parseFloat(e.target.value) || 0)}
+                      className="w-full bg-[#18140F] border border-[#2C2720] rounded-lg p-2 text-sm font-bold text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-gray-300 block mb-1 font-medium flex items-center justify-between">
+                      <span>Reason for Override (Mandatory Audit Log)</span>
+                      <span className="text-[10px] text-[#D8B47A]">* Required</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Festival market surge, Boutique spot hedge..."
+                      value={overrideReason}
+                      onChange={(e) => setOverrideReason(e.target.value)}
+                      className="w-full bg-[#18140F] border border-[#2C2720] rounded-lg p-2.5 text-xs text-white"
+                    />
+                    <p className="text-[10px] text-gray-500 mt-1">
+                      This audit explanation is stamped onto the snapshot and visible in the admin telemetry log.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="submit"
+                      disabled={updatingRates}
+                      className="flex-1 py-2.5 rounded-lg bg-[#D8B47A] hover:bg-[#EBD5A8] text-[#090806] text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
+                    >
+                      {updatingRates ? 'Applying Override...' : 'Enforce Manual Override'}
+                    </button>
+
+                    {rates.isManualOverride && (
+                      <button
+                        type="button"
+                        onClick={handleClearOverride}
+                        disabled={updatingRates}
+                        className="px-3 py-2.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-bold uppercase tracking-wider transition-colors"
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </div>
+                </form>
+              </div>
+
+            </div>
           </div>
         )}
 

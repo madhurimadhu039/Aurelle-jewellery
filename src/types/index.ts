@@ -50,6 +50,8 @@ export interface CartItem {
   engravingText?: string;
 }
 
+export type RateStatus = 'current' | 'delayed' | 'stale' | 'unavailable' | 'override';
+
 export interface MetalRateData {
   gold22k: number;
   gold24k: number;
@@ -61,6 +63,16 @@ export interface MetalRateData {
   goldChange24h: number;
   silverChange24h: number;
   city: string;
+  rateStatus?: RateStatus;
+  dateFormatted?: string;
+  timeFormatted?: string;
+  unit?: string;
+  isManualOverride?: boolean;
+  overrideReason?: string;
+  overrideAdmin?: string;
+  overrideAt?: string;
+  lastFetchedAt?: number;
+  providerId?: 'auto-bullion' | 'goldapi' | 'ibja-benchmark';
 }
 
 export interface Scheme {

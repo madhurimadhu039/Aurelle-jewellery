@@ -234,7 +234,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const res = await rateService.refreshLiveRates();
       setRates(res.rates);
-      if (res.source === 'api') {
+      if (res.source === 'live-feed' || res.source === 'goldapi') {
         showToast('Live bullion market rates updated successfully', 'success');
       } else {
         showToast(res.message, 'info');

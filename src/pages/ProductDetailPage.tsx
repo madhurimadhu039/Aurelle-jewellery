@@ -19,6 +19,7 @@ import { productService } from '../services/productService';
 import { rateService } from '../services/rateService';
 import { useApp } from '../contexts/AppContext';
 import { VirtualTryOnModal } from '../components/VirtualTryOnModal';
+import { TransparentCalculatorModal } from '../components/TransparentCalculatorModal';
 import { ProductCard } from '../components/ProductCard';
 
 export const ProductDetailPage: React.FC = () => {
@@ -30,6 +31,7 @@ export const ProductDetailPage: React.FC = () => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [selectedSize, setSelectedSize] = useState('12 (Standard)');
   const [isTryOnOpen, setIsTryOnOpen] = useState(false);
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'specs' | 'care' | 'pricing' | 'reviews'>('pricing');
   const [added, setAdded] = useState(false);
 
@@ -357,9 +359,28 @@ export const ProductDetailPage: React.FC = () => {
 
               <div className="py-4 text-xs">
                 {activeTab === 'pricing' && (
-                  <div className="bg-[#14110C] border border-[#241F18] rounded-xl p-4 space-y-2">
+                  <div className="bg-[#14110C] border border-[#241F18] rounded-xl p-4 space-y-2.5">
+                    {/* Live Benchmark Reference Pill */}
+                    <div className="p-3 rounded-lg bg-[#0E0C09] border border-[#262018] mb-2 flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400 block">
+                          Official Store Benchmark ({product.purity})
+                        </span>
+                        <span className="text-sm font-bold text-[#D8B47A]">
+                          {formatINR(priceBreakdown.ratePerGram)} <span className="text-xs font-normal text-gray-400">/ gram</span>
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsCalculatorOpen(true)}
+                        className="px-3 py-1.5 rounded-lg bg-[#1C1710] hover:bg-[#2A2216] border border-[#D8B47A]/40 text-[#D8B47A] text-[11px] font-bold uppercase tracking-wider transition-colors"
+                      >
+                        Customize Formula
+                      </button>
+                    </div>
+
                     <div className="flex justify-between text-gray-400">
-                      <span>Pure Metal Value ({product.weightGrams}g × {product.purity}):</span>
+                      <span>Pure Metal Value ({product.weightGrams}g @ {formatINR(priceBreakdown.ratePerGram)}/g):</span>
                       <span className="font-semibold text-white">{formatINR(priceBreakdown.goldValue)}</span>
                     </div>
                     <div className="flex justify-between text-gray-400">
@@ -377,9 +398,12 @@ export const ProductDetailPage: React.FC = () => {
                       <span className="font-semibold text-white">{formatINR(priceBreakdown.gst)}</span>
                     </div>
                     <div className="pt-2 border-t border-[#241F18] flex justify-between font-bold text-sm">
-                      <span className="text-[#D8B47A]">Total Transparent Selling Price:</span>
+                      <span className="text-[#D8B47A]">Final Handcrafted Selling Price:</span>
                       <span className="text-white">{formatINR(product.price)}</span>
                     </div>
+                    <p className="text-[10px] text-gray-500 pt-1 leading-relaxed">
+                      * Live metal rate is indicative based on official daily exchange spot. Handcrafted jewellery price is fixed per piece inclusive of precision setting, hallmark certification, and craftsmanship.
+                    </p>
                   </div>
                 )}
 
@@ -432,6 +456,15 @@ export const ProductDetailPage: React.FC = () => {
         <VirtualTryOnModal
           product={product}
           onClose={() => setIsTryOnOpen(false)}
+        />
+      )}
+
+      {/* Transparent Gold Calculator Modal */}
+      {isCalculatorOpen && (
+        <TransparentCalculatorModal
+          onClose={() => setIsCalculatorOpen(false)}
+          initialWeight={product.weightGrams}
+          initialPurity={product.purity}
         />
       )}
     </div>

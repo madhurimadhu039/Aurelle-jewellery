@@ -14,6 +14,7 @@ import {
   Receipt
 } from 'lucide-react';
 import { GoldRateBanner } from '../components/GoldRateBanner';
+import { DailyGoldRatePanel } from '../components/DailyGoldRatePanel';
 import { VirtualTryOnModal } from '../components/VirtualTryOnModal';
 import { useApp } from '../contexts/AppContext';
 import { productService } from '../services/productService';
@@ -244,9 +245,9 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* ======================================================== */}
-      {/* 2. DAILY GOLD AND SILVER RATES PANEL */}
+      {/* 2. DAILY GOLD AND SILVER RATES PANEL (KHAZANA-STYLE PROMINENT DISPLAY) */}
       {/* ======================================================== */}
-      <GoldRateBanner />
+      <DailyGoldRatePanel />
 
       {/* ======================================================== */}
       {/* 3. OUR COLLECTIONS SECTION — WARM IVORY BACKGROUND */}
