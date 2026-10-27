@@ -1,16 +1,18 @@
 import { Product, MetalRateData, Scheme, PayDueRecord, LedgerEntry, HeirloomPassport, ExistingJewellerySubmission } from '../types';
 
 export const INITIAL_RATES: MetalRateData = {
-  gold22k: 8455,
-  gold24k: 9205,
-  silver1g: 102,
+  gold22k: 13135,
+  gold24k: 14329,
+  silver1g: 164,
   lastUpdated: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ', Today',
   isLive: true,
-  provider: 'IBJA Authorized Benchmark (Aurelle Live Feed)',
+  provider: 'Store Benchmark (Verified 27 Oct 2026)',
   currency: 'INR',
-  goldChange24h: 38.5,
-  silverChange24h: 1.2,
+  goldChange24h: 42.0,
+  silverChange24h: 1.5,
   city: 'Mumbai / Pan India Standard',
+  rateStatus: 'current',
+  unit: '₹ per gram',
 };
 
 export const MOCK_PRODUCTS: Product[] = [

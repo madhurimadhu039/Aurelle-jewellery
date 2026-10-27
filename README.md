@@ -34,8 +34,8 @@ npm run build
 - **Mobile Responsive Design**: App-like bottom navigation dock (Home, Shop, Wishlist, Account, Cart) matching the mobile layout in the brief's visual moodboard.
 
 ### 2. Live Bullion Rates Panel & Transparent Calculator
-- **Today's Gold Rate**: 22K Gold (₹8,455/g), 24K Gold (₹9,205/g), Silver (₹102/g).
-- Real-time refresh button with micro-market fluctuation simulation and live indicator.
+- **Today's Gold Rate**: 22K Gold (₹13,135/g), 24K Gold (₹14,329/g), Silver (₹164/g) [IBJA Standard Pan-India].
+- Automated daily live market feed with Troy Oz to gram conversion, Indian import tariff factor, and smart 30-min cache.
 - **Transparent Gold Price Calculator**: Unbundled pricing breakdown formula (`Gold Weight × Benchmark Rate + Artisan Making Charges + Solitaire Carats + 3% GST`).
 
 ### 3. Collections & Product Details

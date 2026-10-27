@@ -131,9 +131,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setRates(updatedRates);
     });
 
-    // Initial background sync from Firestore if configured
+    // Initial background sync from Firestore and live bullion rate check
     productService.fetchFromFirestore().catch(() => {});
-    rateService.fetchRates().catch(() => {});
+    rateService.initializeRates().then((latest) => {
+      if (latest && latest.gold22k !== 8455) {
+        setRates(latest);
+      }
+    }).catch(() => {});
 
     return () => {
       unsubscribeAuth();
@@ -141,6 +145,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubscribeRates();
     };
   }, []);
+
+  // Guard against any residual stale 8455 in state
+  useEffect(() => {
+    if (rates.gold22k === 8455) {
+      setRates(rateService.getRates());
+    }
+  }, [rates]);
 
   useEffect(() => {
     localStorage.setItem('aurelle_cart', JSON.stringify(cart));
