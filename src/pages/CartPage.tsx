@@ -3,9 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Trash2, ShoppingBag, ShieldCheck, ArrowRight, CheckCircle2, Sparkles } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useApp } from '../contexts/AppContext';
+import { productService } from '../services/productService';
 
 export const CartPage: React.FC = () => {
-  const { cart, removeFromCart, updateQuantity, clearCart, cartSubtotal, formatINR } = useApp();
+  const { cart, removeFromCart, updateQuantity, clearCart, cartSubtotal, formatINR, user } = useApp();
   const navigate = useNavigate();
 
   const [coupon, setCoupon] = useState('');
@@ -15,14 +16,14 @@ export const CartPage: React.FC = () => {
   const [orderComplete, setOrderComplete] = useState(false);
   const [orderId, setOrderId] = useState('');
 
-  // Form states
+  // Form states initialized with logged-in user details if available
   const [formData, setFormData] = useState({
-    name: 'Madhurima Sharma',
-    email: 'madhurima@example.com',
-    phone: '+91 98765 43210',
-    address: '14B, Altamount Road, Cumballa Hill',
-    city: 'Mumbai',
-    pincode: '400026',
+    name: user?.name || 'Madhurima Sharma',
+    email: user?.email || 'madhurima@example.com',
+    phone: user?.phone || '+91 98765 43210',
+    address: user?.addresses?.[0]?.street || '14B, Altamount Road, Cumballa Hill',
+    city: user?.addresses?.[0]?.city || 'Mumbai',
+    pincode: user?.addresses?.[0]?.pincode || '400026',
     paymentMode: 'UPI',
   });
 
@@ -37,11 +38,29 @@ export const CartPage: React.FC = () => {
     }
   };
 
-  const gstAmount = Math.round((cartSubtotal - discount) * 0.03);
-  const finalTotal = cartSubtotal - discount + gstAmount;
+  // Re-verify prices and stock against active product catalogue
+  let validatedSubtotal = 0;
+  for (const item of cart) {
+    const liveProd = productService.getById(item.product.id);
+    const unitPrice = liveProd ? liveProd.price : item.product.price;
+    validatedSubtotal += unitPrice * item.quantity;
+  }
+
+  const gstAmount = Math.round((validatedSubtotal - discount) * 0.03);
+  const finalTotal = validatedSubtotal - discount + gstAmount;
 
   const handlePlaceOrder = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Verify stock availability
+    for (const item of cart) {
+      const liveProd = productService.getById(item.product.id);
+      if (liveProd && liveProd.stock < item.quantity) {
+        alert(`Insufficient vault stock for "${item.product.name}". Only ${liveProd.stock} remaining in vault.`);
+        return;
+      }
+    }
+
     const newOrderId = `AUR-ORD-${Math.floor(100000 + Math.random() * 900000)}`;
     setOrderId(newOrderId);
     setOrderComplete(true);
@@ -67,14 +86,19 @@ export const CartPage: React.FC = () => {
           <div className="w-16 h-16 rounded-full bg-[#10B981]/20 border border-[#10B981] text-[#10B981] flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 className="w-8 h-8" />
           </div>
-          <span className="text-xs uppercase font-bold tracking-widest text-[#D8B47A]">Order Confirmed</span>
+          <span className="text-xs uppercase font-bold tracking-widest text-[#D8B47A]">Order Registered</span>
           <h2 className="font-serif-luxury text-3xl font-bold text-white mt-1 mb-2">
             Thank You for Your Patronage
           </h2>
           <p className="text-xs text-gray-400 mb-4">
-            Your order <strong className="text-[#D8B47A]">#{orderId}</strong> has been received and registered with the Master Guild.
+            Your order <strong className="text-[#D8B47A]">#{orderId}</strong> has been logged in the vault register.
           </p>
-          <div className="bg-[#18140F] border border-[#2B2319] rounded-xl p-4 text-xs text-left mb-6 space-y-1.5">
+
+          <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-[11px] text-amber-200 text-left mb-5">
+            <strong>Payment Notice (Demo Environment):</strong> Online payment processing gateway is currently in sandbox/pending configuration. No live bank deduction was made.
+          </div>
+
+          <div className="bg-[#18140F] border border-[#2B2319] rounded-xl p-4 text-xs text-left mb-6 space-y-2">
             <div className="flex justify-between">
               <span className="text-gray-400">Recipient:</span>
               <span className="text-white font-medium">{formData.name}</span>
@@ -84,24 +108,24 @@ export const CartPage: React.FC = () => {
               <span className="text-white font-medium">{formData.address}, {formData.city}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Payment Mode:</span>
-              <span className="text-white font-medium">{formData.paymentMode} (Verified)</span>
+              <span className="text-gray-400">Payment Status:</span>
+              <span className="text-[#D8B47A] font-medium">{formData.paymentMode} (Demo Registration)</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Total Paid:</span>
-              <span className="text-[#D8B47A] font-bold">{formatINR(finalTotal)}</span>
+            <div className="flex justify-between pt-2 border-t border-[#241F18]">
+              <span className="text-gray-400 font-semibold">Total Value:</span>
+              <span className="text-[#D8B47A] font-bold text-sm">{formatINR(finalTotal)}</span>
             </div>
           </div>
           <div className="flex gap-3">
             <Link
               to="/passport"
-              className="flex-1 py-2.5 rounded-lg bg-[#D8B47A] text-[#090806] text-xs font-bold uppercase tracking-wider"
+              className="flex-1 py-2.5 rounded-lg bg-[#D8B47A] text-[#090806] text-xs font-bold uppercase tracking-wider hover:bg-[#EBD5A8]"
             >
               View Heirloom Passport
             </Link>
             <Link
               to="/shop"
-              className="flex-1 py-2.5 rounded-lg bg-[#1D1812] text-white border border-[#2C2720] text-xs font-bold uppercase tracking-wider"
+              className="flex-1 py-2.5 rounded-lg bg-[#1D1812] text-white border border-[#2C2720] text-xs font-bold uppercase tracking-wider hover:bg-[#251F17]"
             >
               Continue Shopping
             </Link>
@@ -284,15 +308,31 @@ export const CartPage: React.FC = () => {
 
       {/* Checkout Modal */}
       {checkoutModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
-          <div className="bg-[#120F0B] border border-[#D8B47A]/40 rounded-2xl max-w-xl w-full p-6 text-left max-h-[90vh] overflow-y-auto">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setCheckoutModalOpen(false);
+          }}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="bg-[#120F0B] border border-[#D8B47A]/40 rounded-2xl max-w-xl w-full p-6 text-left max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="flex justify-between items-center pb-3 border-b border-[#241F18] mb-4">
               <h3 className="font-display-luxury text-base font-bold text-white">
                 CONFIRM SHIPPING & ORDER
               </h3>
-              <button onClick={() => setCheckoutModalOpen(false)} className="text-gray-400">
-                ✕
+              <button 
+                type="button"
+                onClick={() => setCheckoutModalOpen(false)} 
+                aria-label="Close dialog"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-[#D8B47A] hover:bg-[#1E1912] focus:outline-none focus:ring-2 focus:ring-[#D8B47A] text-xl font-light leading-none"
+              >
+                ×
               </button>
+            </div>
+
+            <div className="mb-4 p-3 rounded-xl bg-[#D8B47A]/10 border border-[#D8B47A]/30 text-[11px] text-[#D8B47A]">
+              <strong>Sandbox / Demo Notice:</strong> Payment gateway is in demo mode. Submitting this order will register your request in the vault without live credit card/UPI charges.
             </div>
 
             <form onSubmit={handlePlaceOrder} className="space-y-4 text-xs">

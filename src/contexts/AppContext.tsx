@@ -1,12 +1,13 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Product, CartItem, MetalRateData, UserProfile } from '../types';
 import { rateService } from '../services/rateService';
 import { authService } from '../services/authService';
+import { productService } from '../services/productService';
 
 interface Toast {
   id: string;
   message: string;
-  type: 'success' | 'info' | 'gold';
+  type: 'success' | 'info' | 'gold' | 'error';
 }
 
 interface AppContextType {
@@ -36,20 +37,44 @@ interface AppContextType {
   refreshRates: () => Promise<void>;
   isRefreshingRates: boolean;
 
+  // Products
+  products: Product[];
+  refreshProducts: () => Promise<void>;
+
   // User & Auth
-  user: UserProfile;
-  switchRole: (role: 'customer' | 'admin') => void;
-  updateUser: (updates: Partial<UserProfile>) => void;
+  user: UserProfile | null;
+  isAdmin: boolean;
+  loginCustomer: (email: string, pass: string) => Promise<UserProfile>;
+  registerCustomer: (name: string, email: string, pass: string, phone?: string) => Promise<UserProfile>;
+  loginAdmin: (email: string, pass: string) => Promise<UserProfile>;
+  logout: () => Promise<void>;
+  updateUser: (updates: Partial<UserProfile>) => Promise<void>;
 
   // Toast
   toasts: Toast[];
-  showToast: (message: string, type?: 'success' | 'info' | 'gold') => void;
+  showToast: (message: string, type?: 'success' | 'info' | 'gold' | 'error') => void;
 
   // Formatters
   formatINR: (amount: number) => string;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
+
+const GUEST_PATRON: UserProfile = {
+  uid: 'patron-guest-demo',
+  name: 'Madhurima Sharma',
+  email: 'madhurima@example.com',
+  phone: '+91 98765 43210',
+  role: 'customer',
+  addresses: [
+    {
+      street: '14B, Altamount Road, Cumballa Hill',
+      city: 'Mumbai',
+      state: 'Maharashtra',
+      pincode: '400026',
+    },
+  ],
+};
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Cart state persisted to localStorage
@@ -79,11 +104,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [rates, setRates] = useState<MetalRateData>(() => rateService.getRates());
   const [isRefreshingRates, setIsRefreshingRates] = useState(false);
 
-  // User state
-  const [user, setUser] = useState<UserProfile>(() => authService.getCurrentUser());
+  // Products state (subscribes to real-time changes)
+  const [products, setProducts] = useState<Product[]>(() => productService.getAll(false));
+
+  // User & Auth state
+  const [user, setUser] = useState<UserProfile | null>(() => authService.getCurrentUser() || GUEST_PATRON);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
   // Toasts
   const [toasts, setToasts] = useState<Toast[]>([]);
+
+  // Sync auth state on mount and subscribe to changes
+  useEffect(() => {
+    const unsubscribeAuth = authService.subscribeToAuth((activeUser, adminFlag) => {
+      setUser(activeUser || GUEST_PATRON);
+      setIsAdmin(adminFlag);
+    });
+
+    // Subscribe to product updates
+    const unsubscribeProducts = productService.subscribe((updated) => {
+      setProducts(updated.filter((p) => p.isPublished !== false));
+    });
+
+    // Subscribe to rate updates
+    const unsubscribeRates = rateService.subscribe((updatedRates) => {
+      setRates(updatedRates);
+    });
+
+    // Initial background sync from Firestore if configured
+    productService.fetchFromFirestore().catch(() => {});
+    rateService.fetchRates().catch(() => {});
+
+    return () => {
+      unsubscribeAuth();
+      unsubscribeProducts();
+      unsubscribeRates();
+    };
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('aurelle_cart', JSON.stringify(cart));
@@ -93,13 +150,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('aurelle_wishlist', JSON.stringify(wishlist));
   }, [wishlist]);
 
-  const showToast = (message: string, type: 'success' | 'info' | 'gold' = 'gold') => {
-    const id = Date.now().toString();
+  const showToast = useCallback((message: string, type: 'success' | 'info' | 'gold' | 'error' = 'gold') => {
+    const id = Date.now().toString() + Math.random().toString(36).substring(2, 6);
     setToasts((prev) => [...prev, { id, message, type }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 3800);
-  };
+  }, []);
 
   const addToCart = (product: Product, quantity = 1, selectedSize?: string) => {
     setCart((prev) => {
@@ -175,24 +232,63 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const refreshRates = async () => {
     setIsRefreshingRates(true);
     try {
-      const updated = await rateService.refreshLiveRates();
-      setRates(updated);
-      showToast('Live bullion market rates updated successfully', 'success');
-    } catch (e) {
-      showToast('Unable to fetch live rates. Using cached rates.', 'info');
+      const res = await rateService.refreshLiveRates();
+      setRates(res.rates);
+      if (res.source === 'api') {
+        showToast('Live bullion market rates updated successfully', 'success');
+      } else {
+        showToast(res.message, 'info');
+      }
+    } catch (e: any) {
+      showToast('Unable to reach rate provider. Displaying official benchmark.', 'info');
     } finally {
       setIsRefreshingRates(false);
     }
   };
 
-  const switchRole = (role: 'customer' | 'admin') => {
-    const updated = authService.setUserRole(role);
-    setUser(updated);
-    showToast(`Switched view to ${role.toUpperCase()} mode`, 'gold');
+  const refreshProducts = async () => {
+    const updated = await productService.fetchFromFirestore();
+    setProducts(updated.filter((p) => p.isPublished !== false));
   };
 
-  const updateUser = (updates: Partial<UserProfile>) => {
-    const updated = authService.updateProfile(updates);
+  const loginCustomer = async (email: string, pass: string): Promise<UserProfile> => {
+    const profile = await authService.loginCustomer(email, pass);
+    setUser(profile);
+    setIsAdmin(profile.role === 'admin');
+    showToast(`Welcome back, ${profile.name}`, 'success');
+    return profile;
+  };
+
+  const registerCustomer = async (
+    name: string, 
+    email: string, 
+    pass: string, 
+    phone?: string
+  ): Promise<UserProfile> => {
+    const profile = await authService.registerCustomer(name, email, pass, phone);
+    setUser(profile);
+    setIsAdmin(false);
+    showToast(`Account registered successfully. Welcome to Aurelle!`, 'success');
+    return profile;
+  };
+
+  const loginAdmin = async (email: string, pass: string): Promise<UserProfile> => {
+    const admin = await authService.loginAdmin(email, pass);
+    setUser(admin);
+    setIsAdmin(true);
+    showToast(`Aurelle Guild Admin credentials authenticated`, 'gold');
+    return admin;
+  };
+
+  const logout = async () => {
+    await authService.logout();
+    setUser(GUEST_PATRON);
+    setIsAdmin(false);
+    showToast('Signed out successfully', 'info');
+  };
+
+  const updateUser = async (updates: Partial<UserProfile>) => {
+    const updated = await authService.updateProfile(updates);
     setUser(updated);
     showToast('Account details updated', 'success');
   };
@@ -226,8 +322,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         rates,
         refreshRates,
         isRefreshingRates,
+        products,
+        refreshProducts,
         user,
-        switchRole,
+        isAdmin,
+        loginCustomer,
+        registerCustomer,
+        loginAdmin,
+        logout,
         updateUser,
         toasts,
         showToast,
@@ -245,6 +347,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 ? 'bg-[#15130F]/95 text-[#F7F1E7] border-[#D8B47A]/50 shadow-[0_4px_25px_rgba(216,180,122,0.18)]'
                 : toast.type === 'success'
                 ? 'bg-[#0E1E14]/95 text-[#D1FAE5] border-[#10B981]/50'
+                : toast.type === 'error'
+                ? 'bg-[#2B0E0E]/95 text-[#FCA5A5] border-[#EF4444]/50'
                 : 'bg-[#18181B]/95 text-gray-200 border-gray-700'
             }`}
           >

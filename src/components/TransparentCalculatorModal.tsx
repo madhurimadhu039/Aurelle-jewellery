@@ -27,8 +27,23 @@ export const TransparentCalculatorModal: React.FC<Props> = ({
     stoneValue,
   });
 
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      role="dialog"
+      aria-modal="true"
+    >
       <div className="bg-[#12100C] border border-[#D8B47A]/40 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative text-left">
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-[#2C2720]">

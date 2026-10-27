@@ -20,7 +20,7 @@ import { useApp } from '../contexts/AppContext';
 
 export const ShopPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { formatINR } = useApp();
+  const { formatINR, products } = useApp();
 
   const urlCategory = searchParams.get('category') || 'All';
   const urlSearch = searchParams.get('search') || '';
@@ -79,7 +79,7 @@ export const ShopPage: React.FC = () => {
       maxPrice,
       sortBy: sortBy === 'featured' ? undefined : (sortBy as any),
     });
-  }, [selectedCategory, searchQuery, selectedPurity, selectedStyle, maxPrice, sortBy]);
+  }, [products, selectedCategory, searchQuery, selectedPurity, selectedStyle, maxPrice, sortBy]);
 
   const resetFilters = () => {
     setSelectedCategory('All');

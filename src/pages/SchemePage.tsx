@@ -16,9 +16,9 @@ export const SchemePage: React.FC = () => {
   const [enrollModalOpen, setEnrollModalOpen] = useState(false);
 
   // Form
-  const [enrollName, setEnrollName] = useState(user.name);
-  const [enrollEmail, setEnrollEmail] = useState(user.email);
-  const [enrollPhone, setEnrollPhone] = useState(user.phone || '+91 98765 43210');
+  const [enrollName, setEnrollName] = useState(user?.name || 'Madhurima Sharma');
+  const [enrollEmail, setEnrollEmail] = useState(user?.email || 'madhurima@example.com');
+  const [enrollPhone, setEnrollPhone] = useState(user?.phone || '+91 98765 43210');
 
   const totalCustomerContribution = monthlyAmount * (selectedScheme.durationMonths - 1);
   const aurelleBonus = monthlyAmount;
@@ -353,12 +353,31 @@ export const SchemePage: React.FC = () => {
 
       {/* Enrollment Modal */}
       {enrollModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
-          <div className="bg-[#120F0B] border border-[#D8B47A]/40 rounded-2xl max-w-lg w-full p-6 text-left">
-            <h3 className="font-display-luxury text-base font-bold text-white mb-1">
-              ENROL IN {selectedScheme.name.toUpperCase()}
-            </h3>
-            <p className="text-xs text-gray-400 mb-4">{selectedScheme.tagline}</p>
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-150"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setEnrollModalOpen(false);
+          }}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="bg-[#120F0B] border border-[#D8B47A]/40 rounded-2xl max-w-lg w-full p-6 text-left shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-[#241F18] mb-4">
+              <div>
+                <h3 className="font-display-luxury text-base font-bold text-white">
+                  ENROL IN {selectedScheme.name.toUpperCase()}
+                </h3>
+                <p className="text-xs text-gray-400">{selectedScheme.tagline}</p>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setEnrollModalOpen(false)} 
+                aria-label="Close dialog"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-[#D8B47A] hover:bg-[#1E1912] focus:outline-none focus:ring-2 focus:ring-[#D8B47A] text-xl font-light leading-none"
+              >
+                ×
+              </button>
+            </div>
 
             <form onSubmit={handleEnrollSubmit} className="space-y-4 text-xs">
               <div>

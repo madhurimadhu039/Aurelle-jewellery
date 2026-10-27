@@ -11,7 +11,7 @@ import {
 import { useApp } from '../contexts/AppContext';
 
 export const Navbar: React.FC = () => {
-  const { cartCount, wishlist, user, switchRole } = useApp();
+  const { cartCount, wishlist, user, isAdmin, logout } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -119,21 +119,19 @@ export const Navbar: React.FC = () => {
 
                 {accountDropdownOpen && (
                   <div 
-                    className="absolute right-0 mt-3 w-56 rounded-xl bg-[#110E0B] border border-[#2A231A] shadow-2xl py-2 z-50 text-xs text-left"
+                    className="absolute right-0 mt-3 w-60 rounded-xl bg-[#110E0B] border border-[#2A231A] shadow-2xl py-2 z-50 text-xs text-left"
                     onClick={() => setAccountDropdownOpen(false)}
                   >
                     <div className="px-4 py-2.5 border-b border-[#241F18]">
-                      <p className="font-semibold text-white">{user.name}</p>
-                      <p className="text-[11px] text-gray-400 truncate">{user.email}</p>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          switchRole(user.role === 'customer' ? 'admin' : 'customer');
-                        }}
-                        className="mt-1.5 text-[10px] text-[#D8B47A] underline block"
-                      >
-                        Mode: {user.role.toUpperCase()} (Switch role)
-                      </button>
+                      <p className="font-semibold text-white">{user?.name || 'Patron'}</p>
+                      <p className="text-[11px] text-gray-400 truncate">{user?.email || 'patron@aurelle.com'}</p>
+                      <span className={`inline-block mt-1 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
+                        isAdmin 
+                          ? 'bg-[#D8B47A]/20 text-[#D8B47A] border border-[#D8B47A]/40' 
+                          : 'bg-gray-800 text-gray-300'
+                      }`}>
+                        {isAdmin ? 'Guild Administrator' : 'Registered Patron'}
+                      </span>
                     </div>
                     <Link to="/account" className="block px-4 py-2 hover:bg-[#1A1611] text-white font-medium">My Patron Dashboard</Link>
                     <Link to="/passport" className="block px-4 py-2 hover:bg-[#1A1611] text-gray-300 hover:text-white">Heirloom Passport™</Link>
@@ -141,10 +139,27 @@ export const Navbar: React.FC = () => {
                     <Link to="/pay-due" className="block px-4 py-2 hover:bg-[#1A1611] text-gray-300 hover:text-white">Pay Due Invoices</Link>
                     <Link to="/ledger" className="block px-4 py-2 hover:bg-[#1A1611] text-gray-300 hover:text-white">My Ledger Statement</Link>
                     <Link to="/add-existing" className="block px-4 py-2 hover:bg-[#1A1611] text-gray-300 hover:text-white">Add Existing Jewellery</Link>
-                    {user.role === 'admin' && (
-                      <Link to="/admin" className="block px-4 py-2 bg-[#D8B47A]/10 text-[#D8B47A] font-medium border-t border-[#241F18]">
-                        Admin Control Centre
-                      </Link>
+                    
+                    <div className="border-t border-[#241F18] my-1" />
+                    
+                    <Link 
+                      to="/admin" 
+                      className={`block px-4 py-2 font-medium ${
+                        isAdmin 
+                          ? 'bg-[#D8B47A]/15 text-[#D8B47A] hover:bg-[#D8B47A]/25' 
+                          : 'text-gray-400 hover:text-[#D8B47A] hover:bg-[#1A1611]'
+                      }`}
+                    >
+                      {isAdmin ? '✦ Admin Control Center' : 'Guild Admin Access'}
+                    </Link>
+
+                    {isAdmin && (
+                      <button
+                        onClick={() => logout()}
+                        className="w-full text-left px-4 py-2 text-rose-400 hover:bg-[#1A1611] text-xs font-medium"
+                      >
+                        Sign Out of Admin Suite
+                      </button>
                     )}
                   </div>
                 )}

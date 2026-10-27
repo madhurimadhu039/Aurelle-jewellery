@@ -8,10 +8,11 @@ import { useApp } from '../contexts/AppContext';
 
 export const PayDuePage: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const { formatINR, showToast } = useApp();
+  const { formatINR, showToast, user, isAdmin } = useApp();
 
   const initialSearch = searchParams.get('search') || '';
   const [query, setQuery] = useState(initialSearch);
+  const [contactCheck, setContactCheck] = useState('');
   const [record, setRecord] = useState<PayDueRecord | undefined>(undefined);
   const [hasSearched, setHasSearched] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -48,7 +49,7 @@ export const PayDuePage: React.FC = () => {
   const handleVerifyRecord = async (searchVal: string) => {
     const trimmed = (searchVal || '').trim();
     if (!trimmed) {
-      setVerificationError('Please enter a valid Invoice ID (e.g. AUR-INV-2026-8941), Order reference, or registered Mobile No.');
+      setVerificationError('Please enter a valid Invoice ID (e.g. AUR-INV-2026-8941) or Order reference.');
       setVerificationSuccess(null);
       setRecord(undefined);
       return;
@@ -67,7 +68,7 @@ export const PayDuePage: React.FC = () => {
     setHasSearched(true);
 
     try {
-      const result = await payDueService.verifyRecord(trimmed);
+      const result = await payDueService.verifyRecord(trimmed, contactCheck, user, isAdmin);
       if (result.success && result.record) {
         setRecord(result.record);
         setPayAmount(result.record.balanceDue);
@@ -85,7 +86,7 @@ export const PayDuePage: React.FC = () => {
     }
   };
 
-  const handlePaySubmit = (e: React.FormEvent) => {
+  const handlePaySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!record) return;
     if (payAmount <= 0 || payAmount > record.balanceDue) {
@@ -94,29 +95,28 @@ export const PayDuePage: React.FC = () => {
     }
 
     setIsProcessing(true);
-    setTimeout(() => {
-      try {
-        const updated = payDueService.recordPayment(record.id, payAmount, paymentMode);
-        setRecord({ ...updated });
-        setPayModalOpen(false);
-        setIsProcessing(false);
-        showToast(`Payment of ${formatINR(payAmount)} received successfully!`, 'success');
+    try {
+      // In sandbox mode without live PG merchant keys, record as pending merchant settlement
+      const updated = await payDueService.recordPayment(record.id, payAmount, paymentMode, false);
+      setRecord({ ...updated });
+      setPayModalOpen(false);
+      showToast(`Demo/Sandbox payment recorded: ${formatINR(payAmount)}. (Live gateway setup pending)`, 'success');
 
-        try {
-          confetti({
-            particleCount: 70,
-            spread: 60,
-            origin: { y: 0.6 },
-            colors: ['#D8B47A', '#10B981', '#F7F1E7'],
-          });
-        } catch {
-          // safe
-        }
-      } catch (err: any) {
-        setIsProcessing(false);
-        alert(err.message || 'Payment error');
+      try {
+        confetti({
+          particleCount: 70,
+          spread: 60,
+          origin: { y: 0.6 },
+          colors: ['#D8B47A', '#10B981', '#F7F1E7'],
+        });
+      } catch {
+        // safe
       }
-    }, 1000);
+    } catch (err: any) {
+      alert(err.message || 'Payment error');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -150,7 +150,7 @@ export const PayDuePage: React.FC = () => {
               <Search className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Enter Invoice / Bill No (e.g. AUR-INV-2026-8941) or Mobile No"
+                placeholder="Enter Invoice / Bill No (e.g. AUR-INV-2026-8941)"
                 value={query}
                 disabled={isVerifying}
                 onChange={(e) => {
@@ -160,12 +160,24 @@ export const PayDuePage: React.FC = () => {
                 className="w-full bg-[#18140F] border border-[#2C2720] rounded-xl pl-11 pr-4 py-3 text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#D8B47A] disabled:opacity-50"
               />
             </div>
+            {!isAdmin && (
+              <div className="relative sm:w-64">
+                <input
+                  type="text"
+                  placeholder="Registered Mobile (for verification)"
+                  value={contactCheck}
+                  disabled={isVerifying}
+                  onChange={(e) => setContactCheck(e.target.value)}
+                  className="w-full bg-[#18140F] border border-[#2C2720] rounded-xl px-4 py-3 text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#D8B47A] disabled:opacity-50"
+                />
+              </div>
+            )}
             <button
               type="submit"
               id="verify-record-btn"
               data-testid="verify-record-btn"
               disabled={isVerifying}
-              className="px-8 py-3 rounded-xl bg-[#D8B47A] hover:bg-[#EBD5A8] text-[#090806] text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-[#D8B47A]/15 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+              className="px-8 py-3 rounded-xl bg-[#D8B47A] hover:bg-[#EBD5A8] text-[#090806] text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-[#D8B47A]/15 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer flex-shrink-0"
             >
               {isVerifying ? (
                 <>

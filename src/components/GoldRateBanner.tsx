@@ -74,19 +74,28 @@ export const GoldRateBanner: React.FC = () => {
           <div className="flex items-center gap-3 justify-center md:justify-end text-[11px] text-[#A69C8E]">
             <button
               onClick={() => setCalculatorOpen(true)}
-              className="text-[10px] uppercase tracking-wider text-[#D8B47A] hover:underline mr-2"
+              className="text-[10px] uppercase tracking-wider text-[#D8B47A] hover:underline mr-1"
               title="Open Transparent Calculator"
             >
               Gold Calculator
             </button>
 
-            <span>Updated Today, 4:30 PM</span>
+            <span className="hidden sm:inline text-[#7A7165]">|</span>
+
+            <div className="flex flex-col text-right">
+              <span className="text-[10px] text-[#D8B47A] font-medium leading-tight">
+                {rates.isLive ? '● Live Bullion Market' : 'Official Guild Benchmark'}
+              </span>
+              <span className="text-[10px] text-[#8C8375]">
+                {rates.lastUpdated || 'Updated Today, 4:30 PM'}
+              </span>
+            </div>
 
             <button
               onClick={() => refreshRates()}
               disabled={isRefreshingRates}
-              className="p-1 hover:text-[#D8B47A] transition-colors disabled:opacity-50"
-              title="Refresh live rate"
+              className="p-1.5 hover:text-[#D8B47A] transition-colors disabled:opacity-50"
+              title="Refresh Bullion Feed"
               aria-label="Refresh rates"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingRates ? 'animate-spin text-[#D8B47A]' : ''}`} />

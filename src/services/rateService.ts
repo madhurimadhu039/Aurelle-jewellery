@@ -1,10 +1,30 @@
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db, isFirebaseConfigured } from '../lib/firebase';
 import { MetalRateData } from '../types';
 import { INITIAL_RATES } from '../data/mockData';
 
 const RATES_STORAGE_KEY = 'aurelle_metal_rates';
 
+type RateListener = (rates: MetalRateData) => void;
+const rateListeners: Set<RateListener> = new Set();
+
+function notifyRateListeners(rates: MetalRateData) {
+  rateListeners.forEach((l) => {
+    try {
+      l(rates);
+    } catch (e) {
+      console.error('Error notifying rate listener', e);
+    }
+  });
+}
+
 export const rateService = {
-  getRates: (): MetalRateData => {
+  subscribe(listener: RateListener): () => void {
+    rateListeners.add(listener);
+    return () => rateListeners.delete(listener);
+  },
+
+  getRates(): MetalRateData {
     const saved = localStorage.getItem(RATES_STORAGE_KEY);
     if (saved) {
       try {
@@ -16,48 +36,134 @@ export const rateService = {
     return INITIAL_RATES;
   },
 
-  updateRates: (newRates: Partial<MetalRateData>): MetalRateData => {
+  /**
+   * Fetch latest rate snapshot from Firestore or local cache
+   */
+  async fetchRates(): Promise<MetalRateData> {
+    if (isFirebaseConfigured && db) {
+      try {
+        const rateDoc = await getDoc(doc(db, 'rate_snapshots', 'latest'));
+        if (rateDoc.exists()) {
+          const data = rateDoc.data() as MetalRateData;
+          localStorage.setItem(RATES_STORAGE_KEY, JSON.stringify(data));
+          notifyRateListeners(data);
+          return data;
+        }
+      } catch (e) {
+        console.warn('Could not read rates from Firestore:', e);
+      }
+    }
+    return rateService.getRates();
+  },
+
+  /**
+   * Admin updates store benchmark rates across system
+   */
+  async updateRates(newRates: Partial<MetalRateData>): Promise<MetalRateData> {
     const current = rateService.getRates();
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const dateStr = now.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+
     const updated: MetalRateData = {
       ...current,
       ...newRates,
-      lastUpdated: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ', Today',
+      lastUpdated: `${timeStr}, ${dateStr}`,
+      provider: 'Aurelle Master Guild Benchmark (IBJA Basis)',
+      isLive: false,
     };
+
+    if (isFirebaseConfigured && db) {
+      try {
+        await setDoc(doc(db, 'rate_snapshots', 'latest'), updated, { merge: true });
+      } catch (e) {
+        console.warn('Error saving rates to Firestore:', e);
+      }
+    }
+
     localStorage.setItem(RATES_STORAGE_KEY, JSON.stringify(updated));
+    notifyRateListeners(updated);
     return updated;
   },
 
-  refreshLiveRates: async (): Promise<MetalRateData> => {
-    // In production with an API key, we fetch from a bullion API like GoldAPI or Metals-API
-    // Here we simulate live market micro-fluctuations to show real-time dynamic behavior
-    await new Promise((r) => setTimeout(r, 600));
-    const current = rateService.getRates();
-    const goldDelta = Math.floor((Math.random() * 20 - 8));
-    const silverDelta = Number((Math.random() * 0.8 - 0.3).toFixed(1));
+  /**
+   * Refresh rates via legitimate external provider if configured, or report baseline
+   */
+  async refreshLiveRates(): Promise<{ rates: MetalRateData; source: 'api' | 'benchmark'; message: string }> {
+    const apiKey = import.meta.env.VITE_GOLD_API_KEY;
 
+    if (apiKey && apiKey !== 'your_bullion_rate_api_key_here') {
+      try {
+        // Query legitimate bullion market API (GoldAPI.io endpoint)
+        const response = await fetch('https://www.goldapi.io/api/XAU/INR', {
+          headers: {
+            'x-access-token': apiKey,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const goldData = await response.json();
+          // Also fetch silver
+          const silverRes = await fetch('https://www.goldapi.io/api/XAG/INR', {
+            headers: {
+              'x-access-token': apiKey,
+              'Content-Type': 'application/json',
+            },
+          });
+          const silverData = silverRes.ok ? await silverRes.json() : null;
+
+          const current = rateService.getRates();
+          const rate24kPerGram = Math.round(goldData.price_gram_24k || (goldData.price / 31.1035));
+          const rate22kPerGram = Math.round(goldData.price_gram_22k || (rate24kPerGram * (22 / 24)));
+          const silverPerGram = silverData ? Number((silverData.price_gram_24k || (silverData.price / 31.1035)).toFixed(1)) : current.silver1g;
+
+          const now = new Date();
+          const updated: MetalRateData = {
+            ...current,
+            gold24k: rate24kPerGram,
+            gold22k: rate22kPerGram,
+            silver1g: silverPerGram,
+            lastUpdated: `${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}, Today`,
+            isLive: true,
+            provider: 'Live Bullion Feed (GoldAPI)',
+          };
+
+          localStorage.setItem(RATES_STORAGE_KEY, JSON.stringify(updated));
+          notifyRateListeners(updated);
+          return { rates: updated, source: 'api', message: 'Live bullion rates updated from configured API provider.' };
+        }
+      } catch (err: any) {
+        console.warn('Live API request failed, falling back to official benchmark:', err);
+      }
+    }
+
+    // When external provider key is not configured or unreachable:
+    // Report legitimate benchmark without inventing fake random fluctuations
+    const current = rateService.getRates();
     const updated: MetalRateData = {
       ...current,
-      gold22k: Math.max(8000, current.gold22k + goldDelta),
-      gold24k: Math.max(8800, current.gold24k + Math.round(goldDelta * 1.09)),
-      silver1g: Math.max(90, Number((current.silver1g + silverDelta).toFixed(1))),
-      goldChange24h: Number((current.goldChange24h + (goldDelta > 0 ? 2.5 : -2.5)).toFixed(1)),
-      silverChange24h: Number((current.silverChange24h + silverDelta).toFixed(1)),
-      lastUpdated: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ', Just now',
-      isLive: true,
+      provider: 'Aurelle Master Guild Benchmark (IBJA Basis)',
+      isLive: false,
     };
-
     localStorage.setItem(RATES_STORAGE_KEY, JSON.stringify(updated));
-    return updated;
+    notifyRateListeners(updated);
+
+    return { 
+      rates: updated, 
+      source: 'benchmark', 
+      message: 'External bullion provider API key pending configuration. Showing official Aurelle Guild Benchmark.' 
+    };
   },
 
   // Transparent Gold & Diamond Calculator
-  calculatePrice: (params: {
+  calculatePrice(params: {
     weightGrams: number;
     purity: string;
     makingChargePercent?: number;
     stoneValue?: number;
     diamondCarat?: number;
-  }) => {
+  }) {
     const rates = rateService.getRates();
     let ratePerGram = rates.gold22k;
 

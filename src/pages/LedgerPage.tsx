@@ -31,7 +31,7 @@ export const LedgerPage: React.FC = () => {
               Customer Ledger Statement
             </h1>
             <p className="text-xs text-gray-400 mt-1">
-              Patron Account: <strong className="text-white">{user.name}</strong> • Account ID: {user.uid}
+              Patron Account: <strong className="text-white">{user?.name || 'Patron'}</strong> • Account ID: {user?.uid || 'patron-guest'}
             </p>
           </div>
 

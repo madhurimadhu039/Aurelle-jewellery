@@ -22,7 +22,7 @@ import { Product, PayDueRecord } from '../types';
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
-  const { toggleWishlist, isInWishlist, formatINR } = useApp();
+  const { toggleWishlist, isInWishlist, formatINR, products } = useApp();
 
   const [heroSlide, setHeroSlide] = useState(0);
   const [payDueQuery, setPayDueQuery] = useState('');
@@ -125,7 +125,6 @@ export const HomePage: React.FC = () => {
   ];
 
   // Featured Products matching the 4 reference pieces
-  const products = productService.getAll();
   const featured = [
     products.find((p) => p.name.includes('Royal Solitaire')) || products[0],
     products.find((p) => p.name.includes('Eternal Diamond Necklace')) || products[1],

@@ -24,9 +24,9 @@ import { ProductCard } from '../components/ProductCard';
 export const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { addToCart, toggleWishlist, isInWishlist, addToCompare, isInCompare, formatINR } = useApp();
+  const { addToCart, toggleWishlist, isInWishlist, addToCompare, isInCompare, formatINR, products } = useApp();
 
-  const product = productService.getById(id || '');
+  const product = products.find((p) => p.id === id) || productService.getById(id || '');
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [selectedSize, setSelectedSize] = useState('12 (Standard)');
   const [isTryOnOpen, setIsTryOnOpen] = useState(false);
@@ -56,8 +56,7 @@ export const ProductDetailPage: React.FC = () => {
     diamondCarat: product.diamondCarat,
   });
 
-  const relatedProducts = productService
-    .getAll()
+  const relatedProducts = products
     .filter((p) => p.id !== product.id && p.category === product.category)
     .slice(0, 3);
 

@@ -16,7 +16,7 @@ import {
 import { useApp } from '../contexts/AppContext';
 
 export const AccountPage: React.FC = () => {
-  const { user, switchRole, formatINR } = useApp();
+  const { user, isAdmin, logout, formatINR } = useApp();
 
   return (
     <div className="min-h-screen bg-[#090806] text-[#F7F1E7] selection:bg-[#D8B47A]/30 selection:text-[#D8B47A] py-14 text-left">
@@ -33,32 +33,34 @@ export const AccountPage: React.FC = () => {
         <div className="bg-[#120F0B] border border-[#241F18] rounded-2xl p-6 sm:p-8 mb-8 flex flex-col sm:flex-row justify-between sm:items-center gap-6">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-full bg-[#18140F] border border-[#D8B47A]/50 flex items-center justify-center text-[#D8B47A] text-2xl font-serif">
-              {user.name.charAt(0)}
+              {user?.name ? user.name.charAt(0) : 'P'}
             </div>
             <div>
               <span className="text-[10px] uppercase font-bold tracking-[0.2em] text-[#D8B47A]">
                 REGISTERED AURELLE PATRON
               </span>
               <h1 className="font-serif-luxury text-2xl sm:text-3xl font-normal text-white mt-0.5">
-                {user.name}
+                {user?.name || 'Patron'}
               </h1>
               <p className="text-xs text-gray-400 font-light mt-0.5">
-                {user.email} • {user.phone || '+91 98765 43210'}
+                {user?.email || 'patron@example.com'} • {user?.phone || '+91 98765 43210'}
               </p>
             </div>
           </div>
 
-          {/* Role Mode pill */}
+          {/* Access Status & Logout */}
           <div className="flex items-center gap-3">
             <div className="text-right">
-              <span className="text-[10px] text-gray-400 block uppercase">Current Access Role</span>
-              <span className="text-xs font-bold text-[#D8B47A] uppercase">{user.role}</span>
+              <span className="text-[10px] text-gray-400 block uppercase">Authorization</span>
+              <span className={`text-xs font-bold uppercase ${isAdmin ? 'text-[#D8B47A]' : 'text-emerald-400'}`}>
+                {isAdmin ? 'Guild Administrator' : 'Verified Patron'}
+              </span>
             </div>
             <button
-              onClick={() => switchRole(user.role === 'customer' ? 'admin' : 'customer')}
-              className="px-4 py-2 rounded-full border border-[#D8B47A]/50 text-xs text-[#D8B47A] hover:bg-[#D8B47A] hover:text-[#090806] transition-colors"
+              onClick={() => logout()}
+              className="px-4 py-2 rounded-full border border-gray-700 text-xs text-gray-300 hover:border-rose-400 hover:text-rose-400 transition-colors"
             >
-              Switch to {user.role === 'customer' ? 'Admin' : 'Customer'} Mode
+              Sign Out
             </button>
           </div>
         </div>
@@ -177,7 +179,7 @@ export const AccountPage: React.FC = () => {
           </Link>
 
           {/* 6. Admin Control (if admin) */}
-          {user.role === 'admin' && (
+          {isAdmin && (
             <Link
               to="/admin"
               className="bg-[#1A150F] border border-[#D8B47A]/50 rounded-2xl p-6 hover:border-[#D8B47A] transition-all group flex flex-col justify-between"

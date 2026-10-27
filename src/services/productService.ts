@@ -1,77 +1,168 @@
+import { 
+  collection, 
+  doc, 
+  getDocs, 
+  setDoc, 
+  deleteDoc, 
+  updateDoc 
+} from 'firebase/firestore';
+import { db, isFirebaseConfigured } from '../lib/firebase';
 import { Product } from '../types';
 import { MOCK_PRODUCTS } from '../data/mockData';
 
 const PRODUCTS_STORAGE_KEY = 'aurelle_products_db';
 
-export const productService = {
-  getAll: (): Product[] => {
-    const stored = localStorage.getItem(PRODUCTS_STORAGE_KEY);
-    if (stored) {
-      try {
-        let products: Product[] = JSON.parse(stored);
-        let updated = false;
+type ProductListener = (products: Product[]) => void;
+const listeners: Set<ProductListener> = new Set();
 
-        // Auto-heal/migrate any stale or broken bracelet image URLs
-        products = products.map((p) => {
-          if (p.id === 'aur-004' || p.category === 'Bracelets') {
-            const hasBroken = !p.images || !p.images.length || p.images.some((img) => img.includes('photo-1611591475155'));
-            if (hasBroken) {
-              updated = true;
-              return {
-                ...p,
-                images: ['/images/bracelet-1.jpg', '/images/bracelet-2.jpg'],
-              };
-            }
-          }
-          if (p.images && p.images.some((img) => img.includes('photo-1611591475155'))) {
-            updated = true;
-            return {
-              ...p,
-              images: p.images.map((img) =>
-                img.includes('photo-1611591475155') ? '/images/bracelet-1.jpg' : img
-              ),
-            };
-          }
-          return p;
-        });
-
-        if (updated) {
-          localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(products));
-        }
-
-        return products;
-      } catch (e) {
-        console.error('Error reading stored products', e);
-      }
+function notifyListeners(products: Product[]) {
+  listeners.forEach((listener) => {
+    try {
+      listener(products);
+    } catch (e) {
+      console.error('Error notifying product listener:', e);
     }
-    // Initialize if empty
-    localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(MOCK_PRODUCTS));
-    return MOCK_PRODUCTS;
+  });
+}
+
+export const productService = {
+  subscribe(listener: ProductListener): () => void {
+    listeners.add(listener);
+    return () => listeners.delete(listener);
   },
 
-  getById: (id: string): Product | undefined => {
-    const products = productService.getAll();
+  getAll(includeUnpublished = false): Product[] {
+    const stored = localStorage.getItem(PRODUCTS_STORAGE_KEY);
+    let products: Product[] = [];
+
+    if (stored) {
+      try {
+        products = JSON.parse(stored);
+      } catch (e) {
+        console.error('Error reading stored products', e);
+        products = MOCK_PRODUCTS;
+      }
+    } else {
+      products = MOCK_PRODUCTS;
+      localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(products));
+    }
+
+    // Auto-heal bracelet images if needed
+    products = products.map((p) => {
+      const isPublished = p.isPublished !== false; // Default true
+      if (p.id === 'aur-004' || p.category === 'Bracelets') {
+        const hasBroken = !p.images || !p.images.length || p.images.some((img) => img.includes('photo-1611591475155'));
+        if (hasBroken) {
+          return {
+            ...p,
+            isPublished,
+            images: ['/images/bracelet-1.jpg', '/images/bracelet-2.jpg'],
+          };
+        }
+      }
+      return { ...p, isPublished };
+    });
+
+    if (!includeUnpublished) {
+      return products.filter((p) => p.isPublished !== false);
+    }
+
+    return products;
+  },
+
+  getById(id: string): Product | undefined {
+    const products = productService.getAll(true);
     return products.find((p) => p.id === id);
   },
 
-  saveProduct: (product: Product): Product => {
-    const products = productService.getAll();
-    const existingIndex = products.findIndex((p) => p.id === product.id);
-    if (existingIndex >= 0) {
-      products[existingIndex] = product;
-    } else {
-      products.unshift(product);
+  /**
+   * Fetch live products from Firebase Firestore
+   */
+  async fetchFromFirestore(): Promise<Product[]> {
+    if (isFirebaseConfigured && db) {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'products'));
+        if (!querySnapshot.empty) {
+          const remoteProducts: Product[] = [];
+          querySnapshot.forEach((docSnap) => {
+            remoteProducts.push({ id: docSnap.id, ...(docSnap.data() as any) });
+          });
+          localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(remoteProducts));
+          notifyListeners(remoteProducts);
+          return remoteProducts;
+        }
+      } catch (err) {
+        console.warn('Firestore products fetch error, using local cached catalog:', err);
+      }
     }
-    localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(products));
-    return product;
+    return productService.getAll(true);
   },
 
-  deleteProduct: (id: string): void => {
-    const products = productService.getAll().filter((p) => p.id !== id);
-    localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(products));
+  /**
+   * Save (create or update) product in Firebase & Local Cache
+   */
+  async saveProduct(product: Product): Promise<Product> {
+    const cleanProduct: Product = {
+      ...product,
+      isPublished: product.isPublished !== false,
+    };
+
+    // Save to Firestore if configured
+    if (isFirebaseConfigured && db) {
+      try {
+        await setDoc(doc(db, 'products', cleanProduct.id), cleanProduct, { merge: true });
+      } catch (err) {
+        console.warn('Error saving product to Firestore:', err);
+      }
+    }
+
+    // Update local cache
+    const current = productService.getAll(true);
+    const existingIndex = current.findIndex((p) => p.id === cleanProduct.id);
+    if (existingIndex >= 0) {
+      current[existingIndex] = cleanProduct;
+    } else {
+      current.unshift(cleanProduct);
+    }
+
+    localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(current));
+    notifyListeners(current);
+    return cleanProduct;
   },
 
-  filterProducts: (filters: {
+  /**
+   * Toggle product publication status (publish / unpublish)
+   */
+  async togglePublish(id: string): Promise<Product | undefined> {
+    const product = productService.getById(id);
+    if (!product) return undefined;
+
+    const updated: Product = {
+      ...product,
+      isPublished: !product.isPublished,
+    };
+
+    return productService.saveProduct(updated);
+  },
+
+  /**
+   * Delete product from Firebase & Local Cache
+   */
+  async deleteProduct(id: string): Promise<void> {
+    if (isFirebaseConfigured && db) {
+      try {
+        await deleteDoc(doc(db, 'products', id));
+      } catch (err) {
+        console.warn('Error deleting product from Firestore:', err);
+      }
+    }
+
+    const current = productService.getAll(true).filter((p) => p.id !== id);
+    localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(current));
+    notifyListeners(current);
+  },
+
+  filterProducts(filters: {
     category?: string;
     searchQuery?: string;
     minPrice?: number;
@@ -80,8 +171,8 @@ export const productService = {
     metalType?: string;
     style?: string;
     sortBy?: 'price-asc' | 'price-desc' | 'newest' | 'rating';
-  }): Product[] => {
-    let result = productService.getAll();
+  }): Product[] {
+    let result = productService.getAll(false);
 
     if (filters.category && filters.category !== 'All') {
       if (filters.category === 'New Arrivals') {

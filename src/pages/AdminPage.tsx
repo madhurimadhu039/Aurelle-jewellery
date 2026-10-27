@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   ShieldAlert, 
   Package, 
@@ -11,31 +11,71 @@ import {
   Check, 
   CheckCircle2, 
   X, 
-  Layers 
+  Layers,
+  Lock,
+  Eye,
+  EyeOff,
+  LogOut,
+  AlertTriangle,
+  Upload,
+  Sparkles
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { productService } from '../services/productService';
 import { payDueService } from '../services/payDueService';
 import { rateService } from '../services/rateService';
-import { Product, PayDueRecord } from '../types';
+import { Product, PayDueRecord, ExistingJewellerySubmission } from '../types';
+import { MOCK_SUBMISSIONS } from '../data/mockData';
 
 export const AdminPage: React.FC = () => {
-  const { user, switchRole, rates, formatINR, showToast } = useApp();
+  const { 
+    user, 
+    isAdmin, 
+    loginAdmin, 
+    logout, 
+    rates, 
+    formatINR, 
+    showToast 
+  } = useApp();
+
+  // Admin login form states (shown when unauthenticated)
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+
+  // Tabs
   const [activeTab, setActiveTab] = useState<'products' | 'rates' | 'dues' | 'submissions'>('products');
 
-  // Products
-  const [products, setProducts] = useState<Product[]>(() => productService.getAll());
-  const [newProductModal, setNewProductModal] = useState(false);
-  const [newProdName, setNewProdName] = useState('');
-  const [newProdPrice, setNewProdPrice] = useState(95000);
-  const [newProdCategory, setNewProdCategory] = useState('Rings');
-  const [newProdPurity, setNewProdPurity] = useState('18K');
-  const [newProdWeight, setNewProdWeight] = useState(4.2);
+  // Products state (includes unpublished)
+  const [products, setProducts] = useState<Product[]>(() => productService.getAll(true));
+  const [productModalOpen, setProductModalOpen] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+
+  // Product form fields
+  const [prodName, setProdName] = useState('');
+  const [prodSku, setProdSku] = useState('');
+  const [prodPrice, setProdPrice] = useState(95000);
+  const [prodCategory, setProdCategory] = useState('Rings');
+  const [prodPurity, setProdPurity] = useState('18K');
+  const [prodWeight, setProdWeight] = useState(4.2);
+  const [prodStock, setProdStock] = useState(5);
+  const [prodImageUrl, setProdImageUrl] = useState('');
+  const [prodDescription, setProdDescription] = useState('');
+  const [prodStyle, setProdStyle] = useState('Artisan Contemporary');
+  const [prodPublished, setProdPublished] = useState(true);
+  const [formIsDirty, setFormIsDirty] = useState(false);
+  const [savingProduct, setSavingProduct] = useState(false);
+
+  // Modal ref for accessibility
+  const modalRef = useRef<HTMLDivElement>(null);
 
   // Bullion rates manual editor
   const [edit22k, setEdit22k] = useState(rates.gold22k);
   const [edit24k, setEdit24k] = useState(rates.gold24k);
   const [editSilver, setEditSilver] = useState(rates.silver1g);
+  const [updatingRates, setUpdatingRates] = useState(false);
 
   // Pay Dues
   const [payDues, setPayDues] = useState<PayDueRecord[]>(() => payDueService.getAll());
@@ -45,113 +85,382 @@ export const AdminPage: React.FC = () => {
   const [newBillTotal, setNewBillTotal] = useState(150000);
   const [newBillItem, setNewBillItem] = useState('');
 
-  const handleUpdateRates = (e: React.FormEvent) => {
-    e.preventDefault();
-    rateService.updateRates({
-      gold22k: edit22k,
-      gold24k: edit24k,
-      silver1g: editSilver,
-    });
-    showToast('Bullion rates updated in live system!', 'success');
-  };
+  // Submissions
+  const [submissions, setSubmissions] = useState<ExistingJewellerySubmission[]>(() => {
+    const saved = localStorage.getItem('aurelle_existing_submissions');
+    return saved ? JSON.parse(saved) : MOCK_SUBMISSIONS;
+  });
 
-  const handleCreateProduct = (e: React.FormEvent) => {
-    e.preventDefault();
-    const created: Product = {
-      id: 'aur-custom-' + Date.now(),
-      name: newProdName,
-      sku: `AUR-SKU-${Math.floor(1000 + Math.random() * 9000)}`,
-      category: newProdCategory as any,
-      description: 'Handcrafted luxury piece added via Aurelle Admin Suite with verified purity assay.',
-      price: newProdPrice,
-      images: [
-        'https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=800&q=80',
-      ],
-      material: `${newProdPurity} Solid Gold`,
-      purity: newProdPurity as any,
-      weightGrams: newProdWeight,
-      stock: 5,
-      style: 'Artisan Contemporary',
-      occasion: ['Luxury Daily', 'Anniversary'],
-      isFeatured: true,
-      rating: 5.0,
-      reviewsCount: 1,
-      certification: 'BIS 916 Guaranteed',
+  // Listen to keyboard Escape key when modal is open
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && productModalOpen) {
+        handleCloseModal();
+      }
     };
+    if (productModalOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'unset';
+    };
+  }, [productModalOpen, formIsDirty]);
 
-    productService.saveProduct(created);
-    setProducts(productService.getAll());
-    setNewProductModal(false);
-    showToast(`Product "${created.name}" created!`, 'success');
-  };
+  // Keep rates in sync when context rates change
+  useEffect(() => {
+    setEdit22k(rates.gold22k);
+    setEdit24k(rates.gold24k);
+    setEditSilver(rates.silver1g);
+  }, [rates]);
 
-  const handleDeleteProduct = (id: string) => {
-    if (confirm('Delete this product from catalog?')) {
-      productService.deleteProduct(id);
-      setProducts(productService.getAll());
-      showToast('Product deleted', 'info');
+  // Handle Admin Sign In
+  const handleAdminSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginLoading(true);
+    setLoginError(null);
+
+    try {
+      await loginAdmin(adminEmail.trim(), adminPassword);
+      setAdminPassword('');
+      showToast('Aurelle Guild Admin Suite unlocked', 'success');
+    } catch (err: any) {
+      setLoginError(err.message || 'Authentication failed. Please check administrator credentials.');
+      showToast('Access Denied', 'error');
+    } finally {
+      setLoginLoading(false);
     }
   };
 
-  const handleCreatePayDue = (e: React.FormEvent) => {
-    e.preventDefault();
-    payDueService.createRecord({
-      billNumber: newBillNumber || `AUR-INV-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-      customerName: newBillCustomer,
-      customerPhone: newBillPhone,
-      customerEmail: 'customer@example.com',
-      totalAmount: newBillTotal,
-      amountPaid: 0,
-      balanceDue: newBillTotal,
-      dueDate: new Date(Date.now() + 14 * 24 * 3600 * 1000).toISOString().split('T')[0],
-      status: 'PENDING',
-      orderSummary: newBillItem || 'Fine Jewellery Order',
-    });
-    setPayDues(payDueService.getAll());
-    showToast('Pay Due record created for customer', 'success');
-    setNewBillCustomer('');
-    setNewBillPhone('');
+  // Open modal for new piece
+  const handleOpenNewProduct = () => {
+    setEditingProductId(null);
+    setProdName('');
+    setProdSku(`AUR-SKU-${Math.floor(1000 + Math.random() * 9000)}`);
+    setProdPrice(95000);
+    setProdCategory('Rings');
+    setProdPurity('18K');
+    setProdWeight(4.2);
+    setProdStock(5);
+    setProdImageUrl('https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=800&q=80');
+    setProdDescription('Handcrafted luxury creation with verified purity assay and artisan finish.');
+    setProdStyle('Artisan Contemporary');
+    setProdPublished(true);
+    setFormIsDirty(false);
+    setProductModalOpen(true);
   };
 
-  if (user.role !== 'admin') {
+  // Open modal for editing existing piece
+  const handleOpenEditProduct = (prod: Product) => {
+    setEditingProductId(prod.id);
+    setProdName(prod.name);
+    setProdSku(prod.sku);
+    setProdPrice(prod.price);
+    setProdCategory(prod.category);
+    setProdPurity(prod.purity);
+    setProdWeight(prod.weightGrams);
+    setProdStock(prod.stock);
+    setProdImageUrl(prod.images[0] || '');
+    setProdDescription(prod.description);
+    setProdStyle(prod.style);
+    setProdPublished(prod.isPublished !== false);
+    setFormIsDirty(false);
+    setProductModalOpen(true);
+  };
+
+  // Safe Close Modal with unsaved changes verification
+  const handleCloseModal = () => {
+    if (formIsDirty) {
+      const confirmClose = window.confirm(
+        'You have unsaved changes to this jewellery creation. Are you sure you wish to close without saving?'
+      );
+      if (!confirmClose) return;
+    }
+    setProductModalOpen(false);
+    setEditingProductId(null);
+    setFormIsDirty(false);
+  };
+
+  // Save product (Add or Edit)
+  const handleSaveProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!prodName.trim()) {
+      alert('Product name is required');
+      return;
+    }
+    if (prodPrice <= 0) {
+      alert('Product price must be greater than zero');
+      return;
+    }
+
+    setSavingProduct(true);
+    try {
+      const existing = editingProductId ? productService.getById(editingProductId) : null;
+      const productPayload: Product = {
+        id: editingProductId || ('aur-custom-' + Date.now()),
+        name: prodName.trim(),
+        sku: prodSku.trim() || `AUR-SKU-${Math.floor(1000 + Math.random() * 9000)}`,
+        category: prodCategory as any,
+        description: prodDescription.trim() || 'Handcrafted fine jewellery from Aurelle Guild Masterworks.',
+        price: Number(prodPrice),
+        images: prodImageUrl.trim() ? [prodImageUrl.trim()] : [
+          'https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=800&q=80'
+        ],
+        material: `${prodPurity} Solid Gold`,
+        purity: prodPurity as any,
+        weightGrams: Number(prodWeight),
+        stock: Number(prodStock),
+        style: prodStyle,
+        occasion: existing?.occasion || ['Luxury Daily', 'Anniversary'],
+        isFeatured: existing?.isFeatured ?? true,
+        isPublished: prodPublished,
+        rating: existing?.rating ?? 5.0,
+        reviewsCount: existing?.reviewsCount ?? 1,
+        certification: existing?.certification || 'BIS 916 Guaranteed',
+      };
+
+      await productService.saveProduct(productPayload);
+      setProducts(productService.getAll(true));
+      setFormIsDirty(false);
+      setProductModalOpen(false);
+      showToast(
+        editingProductId 
+          ? `Product "${productPayload.name}" updated successfully` 
+          : `New piece "${productPayload.name}" published to vault!`, 
+        'success'
+      );
+    } catch (err: any) {
+      alert('Error saving product: ' + err.message);
+    } finally {
+      setSavingProduct(false);
+    }
+  };
+
+  // Toggle publish / unpublish
+  const handleTogglePublish = async (id: string) => {
+    const updated = await productService.togglePublish(id);
+    setProducts(productService.getAll(true));
+    if (updated) {
+      showToast(
+        updated.isPublished 
+          ? `"${updated.name}" is now Published to Store` 
+          : `"${updated.name}" moved to Unpublished / Vault Draft`,
+        'info'
+      );
+    }
+  };
+
+  // Delete Product
+  const handleDeleteProduct = async (id: string, name: string) => {
+    if (window.confirm(`Permanently remove "${name}" from the product catalogue?`)) {
+      await productService.deleteProduct(id);
+      setProducts(productService.getAll(true));
+      showToast('Product removed from catalogue', 'info');
+    }
+  };
+
+  // Update Bullion Rates
+  const handleUpdateRates = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setUpdatingRates(true);
+    try {
+      await rateService.updateRates({
+        gold22k: Number(edit22k),
+        gold24k: Number(edit24k),
+        silver1g: Number(editSilver),
+      });
+      showToast('Store benchmark bullion rates broadcast system-wide!', 'success');
+    } catch (err: any) {
+      showToast('Error broadcasting rates: ' + err.message, 'error');
+    } finally {
+      setUpdatingRates(false);
+    }
+  };
+
+  // Create Pay Due
+  const handleCreatePayDue = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newBillCustomer.trim() || !newBillPhone.trim()) {
+      alert('Customer name and phone number are required');
+      return;
+    }
+
+    try {
+      await payDueService.createRecord({
+        billNumber: newBillNumber || `AUR-INV-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+        customerName: newBillCustomer.trim(),
+        customerPhone: newBillPhone.trim(),
+        customerEmail: 'patron@example.com',
+        totalAmount: Number(newBillTotal),
+        amountPaid: 0,
+        balanceDue: Number(newBillTotal),
+        dueDate: new Date(Date.now() + 14 * 24 * 3600 * 1000).toISOString().split('T')[0],
+        status: 'PENDING',
+        orderSummary: newBillItem.trim() || 'Fine Jewellery Order',
+      });
+      setPayDues(payDueService.getAll());
+      showToast('Customer invoice created successfully', 'success');
+      setNewBillCustomer('');
+      setNewBillPhone('');
+      setNewBillItem('');
+      setNewBillNumber('');
+    } catch (err: any) {
+      alert('Error creating invoice: ' + err.message);
+    }
+  };
+
+  // Update Submission Status
+  const handleUpdateSubmissionStatus = (id: string, newStatus: ExistingJewellerySubmission['status']) => {
+    const updated = submissions.map((sub) => 
+      sub.id === id ? { ...sub, status: newStatus } : sub
+    );
+    setSubmissions(updated);
+    localStorage.setItem('aurelle_existing_submissions', JSON.stringify(updated));
+    showToast(`Submission status updated to ${newStatus}`, 'success');
+  };
+
+  // =========================================================
+  // 1. SECURE ACCESS CONTROL CHECK
+  // If user is NOT an authorized administrator, render ONLY the secure sign-in portal.
+  // =========================================================
+  if (!isAdmin) {
     return (
       <div className="min-h-screen bg-[#090806] text-white flex flex-col items-center justify-center p-6 text-center">
-        <ShieldAlert className="w-16 h-16 text-[#D8B47A] mb-4" />
-        <h2 className="font-serif-luxury text-3xl font-bold mb-2">Restricted Guild Admin Access</h2>
-        <p className="text-xs text-gray-400 max-w-md mb-6">
-          You are currently in customer viewing mode. Switch to Administrator mode to access product management, bullion feeds, and customer ledger records.
-        </p>
-        <button
-          onClick={() => switchRole('admin')}
-          className="px-6 py-2.5 rounded-lg bg-[#D8B47A] text-[#090806] text-xs font-bold uppercase tracking-wider"
-        >
-          Switch to Admin Role Mode
-        </button>
+        <div className="max-w-md w-full bg-[#120F0B] border border-[#D8B47A]/40 rounded-3xl p-8 sm:p-10 shadow-2xl relative text-left">
+          
+          {/* Guild Emblem & Title */}
+          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-[#241F18]">
+            <div className="w-12 h-12 rounded-2xl bg-[#1C1710] border border-[#D8B47A]/50 flex items-center justify-center text-[#D8B47A]">
+              <Lock className="w-6 h-6 stroke-[1.5]" />
+            </div>
+            <div>
+              <span className="text-[10px] uppercase font-bold tracking-[0.25em] text-[#D8B47A] block">
+                SECURITY CHECKPOINT
+              </span>
+              <h2 className="font-serif-luxury text-2xl font-bold text-white">
+                Admin Control Center
+              </h2>
+            </div>
+          </div>
+
+          <p className="text-xs text-gray-400 mb-6 leading-relaxed">
+            Restricted to authorized Aurelle Guild Administrators and Boutique Managers. Ordinary customer accounts cannot access catalogue administration, bullion master configuration, or customer invoices.
+          </p>
+
+          {loginError && (
+            <div className="mb-6 p-3.5 rounded-xl bg-rose-950/60 border border-rose-500/50 text-rose-200 text-xs flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
+              <span>{loginError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleAdminSignIn} className="space-y-4 text-xs">
+            <div>
+              <label className="text-gray-300 block mb-1.5 font-medium tracking-wide">
+                Guild Administrator Email
+              </label>
+              <input
+                type="email"
+                required
+                placeholder="admin@aurelle.com"
+                value={adminEmail}
+                onChange={(e) => setAdminEmail(e.target.value)}
+                className="w-full bg-[#18140F] border border-[#2B2319] focus:border-[#D8B47A] rounded-xl p-3 text-white placeholder-gray-500 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="text-gray-300 block mb-1.5 font-medium tracking-wide">
+                Master Security Key / Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  placeholder="••••••••••••"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  className="w-full bg-[#18140F] border border-[#2B2319] focus:border-[#D8B47A] rounded-xl p-3 text-white placeholder-gray-500 focus:outline-none pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3 text-gray-400 hover:text-white"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={loginLoading}
+                className="w-full py-3.5 rounded-xl bg-[#D8B47A] hover:bg-[#EBD5A8] text-[#090806] font-bold uppercase tracking-wider text-xs transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {loginLoading ? (
+                  <span>Verifying Credentials...</span>
+                ) : (
+                  <>
+                    <Lock className="w-4 h-4" />
+                    <span>Authenticate & Access Vault</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+
+          <div className="mt-6 pt-4 border-t border-[#1C1712] text-center">
+            <span className="text-[11px] text-gray-500">
+              Not an administrator?{' '}
+              <a href="/" className="text-[#D8B47A] hover:underline">
+                Return to Customer Boutique
+              </a>
+            </span>
+          </div>
+
+        </div>
       </div>
     );
   }
 
+  // =========================================================
+  // 2. AUTHORIZED GUILD ADMIN SUITE
+  // Only rendered when isAdmin === true
+  // =========================================================
   return (
     <div className="min-h-screen bg-[#090806] text-[#F7F1E7] py-10 text-left">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
         {/* Top Admin Header */}
         <div className="flex flex-col sm:flex-row justify-between sm:items-center pb-6 border-b border-[#241F18] mb-8 gap-4">
           <div>
-            <span className="text-xs uppercase font-bold tracking-widest text-[#D8B47A]">
-              AUTHORIZED PERSONNEL CONTROL
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded bg-[#D8B47A]/20 border border-[#D8B47A]/50 text-[10px] uppercase font-bold tracking-widest text-[#D8B47A]">
+                AUTHENTICATED GUILD ADMINISTRATOR
+              </span>
+              <span className="text-xs text-emerald-400 flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                Live Session Active
+              </span>
+            </div>
             <h1 className="font-serif-luxury text-3xl font-bold text-white mt-1">
               Aurelle Guild Admin Suite
             </h1>
-            <p className="text-xs text-gray-400 mt-0.5">Logged in as Administrator ({user.name})</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Logged in as {user?.name || 'Administrator'} ({user?.email})
+            </p>
           </div>
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => switchRole('customer')}
-              className="px-4 py-2 rounded-lg bg-[#18140F] border border-[#2B2319] hover:border-[#D8B47A] text-xs font-semibold text-gray-300"
+              onClick={() => logout()}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#18140F] border border-rose-500/40 hover:border-rose-400 text-xs font-semibold text-rose-300 hover:text-white transition-colors"
             >
-              Exit to Customer View
+              <LogOut className="w-3.5 h-3.5 text-rose-400" />
+              <span>Sign Out of Admin Suite</span>
             </button>
           </div>
         </div>
@@ -166,7 +475,7 @@ export const AdminPage: React.FC = () => {
                 : 'text-gray-400 hover:text-white bg-[#120F0B]'
             }`}
           >
-            Product Catalog ({products.length})
+            Product Catalogue ({products.length})
           </button>
           <button
             onClick={() => setActiveTab('rates')}
@@ -188,18 +497,31 @@ export const AdminPage: React.FC = () => {
           >
             Pay Due Invoices ({payDues.length})
           </button>
+          <button
+            onClick={() => setActiveTab('submissions')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+              activeTab === 'submissions'
+                ? 'bg-[#D8B47A] text-[#090806]'
+                : 'text-gray-400 hover:text-white bg-[#120F0B]'
+            }`}
+          >
+            Jewellery Appraisals ({submissions.length})
+          </button>
         </div>
 
         {/* Tab 1: Products */}
         {activeTab === 'products' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h3 className="font-serif-luxury text-xl font-bold text-white">Catalogue & Inventory</h3>
+              <div>
+                <h3 className="font-serif-luxury text-xl font-bold text-white">Catalogue & Inventory Vault</h3>
+                <p className="text-xs text-gray-400">Add, edit, publish, unpublish, and manage pieces visible to customers.</p>
+              </div>
               <button
-                onClick={() => setNewProductModal(true)}
-                className="px-4 py-2 rounded-lg bg-[#D8B47A] text-[#090806] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5"
+                onClick={handleOpenNewProduct}
+                className="px-4 py-2 rounded-lg bg-[#D8B47A] text-[#090806] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 hover:bg-[#EBD5A8] transition-colors"
               >
-                <Plus className="w-4 h-4" /> Add New Piece
+                <Plus className="w-4 h-4" /> Add New Creation
               </button>
             </div>
 
@@ -212,37 +534,72 @@ export const AdminPage: React.FC = () => {
                     <th className="p-4">Category</th>
                     <th className="p-4">Purity & Weight</th>
                     <th className="p-4">Price</th>
+                    <th className="p-4">Status</th>
                     <th className="p-4">Stock</th>
                     <th className="p-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#1C1712] text-gray-300">
-                  {products.map((p) => (
-                    <tr key={p.id} className="hover:bg-[#16120D]">
-                      <td className="p-4 flex items-center gap-3">
-                        <img src={p.images[0]} alt={p.name} className="w-10 h-10 rounded-lg object-cover bg-black" />
-                        <span className="font-semibold text-white">{p.name}</span>
-                      </td>
-                      <td className="p-4 font-mono text-gray-400">{p.sku}</td>
-                      <td className="p-4">{p.category}</td>
-                      <td className="p-4 font-bold text-[#D8B47A]">{p.purity} ({p.weightGrams}g)</td>
-                      <td className="p-4 font-bold text-white">{formatINR(p.price)}</td>
-                      <td className="p-4">
-                        <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-semibold">
-                          {p.stock} in vault
-                        </span>
-                      </td>
-                      <td className="p-4 text-right">
-                        <button
-                          onClick={() => handleDeleteProduct(p.id)}
-                          className="p-1.5 text-gray-400 hover:text-red-400 rounded"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {products.map((p) => {
+                    const isPub = p.isPublished !== false;
+                    return (
+                      <tr key={p.id} className="hover:bg-[#16120D] transition-colors">
+                        <td className="p-4 flex items-center gap-3">
+                          <img 
+                            src={p.images[0] || '/images/bracelet-1.jpg'} 
+                            alt={p.name} 
+                            className="w-10 h-10 rounded-lg object-cover bg-black border border-[#2A231A]" 
+                          />
+                          <div>
+                            <span className="font-semibold text-white block">{p.name}</span>
+                            <span className="text-[10px] text-gray-400">{p.material}</span>
+                          </div>
+                        </td>
+                        <td className="p-4 font-mono text-gray-400">{p.sku}</td>
+                        <td className="p-4">{p.category}</td>
+                        <td className="p-4 font-bold text-[#D8B47A]">{p.purity} ({p.weightGrams}g)</td>
+                        <td className="p-4 font-bold text-white">{formatINR(p.price)}</td>
+                        <td className="p-4">
+                          <button
+                            onClick={() => handleTogglePublish(p.id)}
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-colors ${
+                              isPub 
+                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20' 
+                                : 'bg-gray-800/50 text-gray-400 border-gray-700 hover:bg-gray-800'
+                            }`}
+                            title="Click to toggle publish status"
+                          >
+                            {isPub ? 'Published' : 'Vault Draft'}
+                          </button>
+                        </td>
+                        <td className="p-4">
+                          <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                            p.stock > 0 
+                              ? 'bg-emerald-500/10 text-emerald-400' 
+                              : 'bg-rose-500/10 text-rose-400'
+                          }`}>
+                            {p.stock > 0 ? `${p.stock} in vault` : 'Out of stock'}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right space-x-2">
+                          <button
+                            onClick={() => handleOpenEditProduct(p)}
+                            className="p-1.5 text-gray-400 hover:text-[#D8B47A] rounded hover:bg-[#1E1912]"
+                            title="Edit Piece"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteProduct(p.id, p.name)}
+                            className="p-1.5 text-gray-400 hover:text-red-400 rounded hover:bg-[#1E1912]"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -252,11 +609,11 @@ export const AdminPage: React.FC = () => {
         {/* Tab 2: Bullion Rates */}
         {activeTab === 'rates' && (
           <div className="max-w-2xl bg-[#120F0B] border border-[#2B2319] rounded-2xl p-6 sm:p-8">
-            <h3 className="font-serif-luxury text-2xl font-bold text-white mb-2">
+            <h3 className="font-serif-luxury text-2xl font-bold text-white mb-1">
               Bullion Rate Master Configuration
             </h3>
             <p className="text-xs text-gray-400 mb-6">
-              Override live market benchmark rates. Changes reflect dynamically across all product price formulas and the top gold rate ticker.
+              Update official store bullion rates. Changes are saved to Firestore rate snapshots and instantly broadcast across all product price formulas, calculators, and banners.
             </p>
 
             <form onSubmit={handleUpdateRates} className="space-y-4 text-xs">
@@ -291,11 +648,17 @@ export const AdminPage: React.FC = () => {
                 />
               </div>
 
+              <div className="p-3 bg-[#18140F] border border-[#241F18] rounded-xl text-[11px] text-gray-400 flex items-center justify-between">
+                <span>Last Published: {rates.lastUpdated}</span>
+                <span className="text-[#D8B47A] font-semibold">{rates.provider}</span>
+              </div>
+
               <button
                 type="submit"
-                className="w-full py-3 rounded-xl bg-[#D8B47A] hover:bg-[#EBD5A8] text-[#090806] text-xs font-bold uppercase tracking-wider"
+                disabled={updatingRates}
+                className="w-full py-3 rounded-xl bg-[#D8B47A] hover:bg-[#EBD5A8] text-[#090806] text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
               >
-                Broadcast Rates Across System
+                {updatingRates ? 'Broadcasting Rates...' : 'Broadcast Rates Across System'}
               </button>
             </form>
           </div>
@@ -307,7 +670,7 @@ export const AdminPage: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Existing Dues List */}
               <div className="lg:col-span-2 space-y-4">
-                <h3 className="font-serif-luxury text-xl font-bold text-white">Outstanding Customer Bills</h3>
+                <h3 className="font-serif-luxury text-xl font-bold text-white">Outstanding Customer Invoices</h3>
                 <div className="space-y-3">
                   {payDues.map((due) => (
                     <div
@@ -317,13 +680,15 @@ export const AdminPage: React.FC = () => {
                       <div>
                         <span className="font-mono font-bold text-white">{due.billNumber}</span>
                         <p className="text-gray-400 mt-0.5">{due.customerName} ({due.customerPhone})</p>
-                        <p className="text-[11px] text-gray-500">{due.orderSummary}</p>
+                        <p className="text-[11px] text-gray-500">{due.orderSummary} • Due: {due.dueDate}</p>
                       </div>
 
                       <div className="text-right">
                         <span className="text-sm font-extrabold text-[#D8B47A]">{formatINR(due.balanceDue)} Due</span>
                         <div className="text-[11px] text-gray-400 mt-0.5">Total: {formatINR(due.totalAmount)}</div>
-                        <span className="text-[10px] font-bold text-emerald-400 uppercase">{due.status}</span>
+                        <span className={`text-[10px] font-bold uppercase ${due.status === 'PAID' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                          {due.status}
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -378,7 +743,7 @@ export const AdminPage: React.FC = () => {
                   </div>
                   <button
                     type="submit"
-                    className="w-full py-2.5 rounded-lg bg-[#D8B47A] text-[#090806] font-bold uppercase tracking-wider"
+                    className="w-full py-2.5 rounded-lg bg-[#D8B47A] text-[#090806] font-bold uppercase tracking-wider mt-2 hover:bg-[#EBD5A8]"
                   >
                     Generate Customer Invoice
                   </button>
@@ -387,98 +752,332 @@ export const AdminPage: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Tab 4: Submissions (Existing Jewellery Appraisals) */}
+        {activeTab === 'submissions' && (
+          <div className="space-y-6">
+            <div>
+              <h3 className="font-serif-luxury text-xl font-bold text-white">Customer Appraisals & Exchange Submissions</h3>
+              <p className="text-xs text-gray-400">Review submitted ancestral heirlooms, bills, and assign valuation or verification status.</p>
+            </div>
+
+            <div className="bg-[#120F0B] border border-[#241F18] rounded-2xl overflow-hidden shadow-xl">
+              <table className="w-full text-xs text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-[#241F18] bg-[#0E0C09] text-gray-400 uppercase tracking-wider">
+                    <th className="p-4">Customer</th>
+                    <th className="p-4">Piece Description</th>
+                    <th className="p-4">Metal & Weight</th>
+                    <th className="p-4">Original Bill</th>
+                    <th className="p-4">Submitted Date</th>
+                    <th className="p-4">Status</th>
+                    <th className="p-4 text-right">Appraisal Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#1C1712] text-gray-300">
+                  {submissions.map((sub) => (
+                    <tr key={sub.id} className="hover:bg-[#16120D] transition-colors">
+                      <td className="p-4">
+                        <span className="font-semibold text-white block">{sub.customerName}</span>
+                        <span className="text-[10px] text-gray-400">{sub.phone}</span>
+                      </td>
+                      <td className="p-4 max-w-xs">{sub.description}</td>
+                      <td className="p-4 text-[#D8B47A] font-semibold">{sub.metalType} • {sub.estimatedWeightGrams}g</td>
+                      <td className="p-4">
+                        {sub.hasBill ? (
+                          <span className="text-emerald-400 font-medium">Verified Bill: {sub.billNumber || 'Attached'}</span>
+                        ) : (
+                          <span className="text-gray-500">No Bill (Vintage)</span>
+                        )}
+                      </td>
+                      <td className="p-4 text-gray-400 font-mono">{sub.submittedAt}</td>
+                      <td className="p-4">
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                          sub.status === 'VERIFIED'
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                            : sub.status === 'REJECTED'
+                            ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+                            : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                        }`}>
+                          {sub.status}
+                        </span>
+                      </td>
+                      <td className="p-4 text-right space-x-2">
+                        {sub.status !== 'VERIFIED' && (
+                          <button
+                            onClick={() => handleUpdateSubmissionStatus(sub.id, 'VERIFIED')}
+                            className="px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500 hover:text-black font-semibold text-[10px]"
+                          >
+                            Approve Assay
+                          </button>
+                        )}
+                        {sub.status !== 'REJECTED' && (
+                          <button
+                            onClick={() => handleUpdateSubmissionStatus(sub.id, 'REJECTED')}
+                            className="px-2.5 py-1 rounded bg-rose-500/20 text-rose-300 hover:bg-rose-500 hover:text-white font-semibold text-[10px]"
+                          >
+                            Reject
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
       </div>
 
-      {/* New Product Modal */}
-      {newProductModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
-          <div className="bg-[#120F0B] border border-[#D8B47A]/40 rounded-2xl max-w-lg w-full p-6 text-left">
-            <h3 className="font-display-luxury text-base font-bold text-white mb-4">
-              ADD JEWELLERY CREATION TO VAULT
-            </h3>
-            <form onSubmit={handleCreateProduct} className="space-y-4 text-xs">
+      {/* =========================================================
+          3. "ADD JEWELLERY CREATION TO VAULT" POPUP MODAL
+          Fixed with:
+          - Clearly visible × close mark in top-right corner using actual multiplication sign ×
+          - Neat position in header with proper spacing and alignment
+          - Accessible type="button", aria-label="Close dialog", visible focus ring
+          - Safe unsaved changes confirmation
+          - Escape key and backdrop click support
+          - Mobile-friendly scrollable container
+      ========================================================= */}
+      {productModalOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-150"
+          onClick={(e) => {
+            // Close when clicking directly on backdrop
+            if (e.target === e.currentTarget) {
+              handleCloseModal();
+            }
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="vault-modal-title"
+        >
+          <div 
+            ref={modalRef}
+            className="bg-[#120F0B] border border-[#D8B47A]/50 rounded-2xl max-w-xl w-full p-6 text-left shadow-2xl max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3.5 border-b border-[#241F18] mb-5">
+              <div className="flex items-center gap-2">
+                <span className="text-[#D8B47A] text-lg">✦</span>
+                <h3 id="vault-modal-title" className="font-serif-luxury text-base sm:text-lg font-bold text-white tracking-wide">
+                  {editingProductId ? 'EDIT JEWELLERY CREATION IN VAULT' : 'ADD JEWELLERY CREATION TO VAULT'}
+                </h3>
+              </div>
+
+              {/* Accessible × Close Mark */}
+              <button
+                type="button"
+                onClick={handleCloseModal}
+                aria-label="Close dialog"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-[#D8B47A] hover:bg-[#1E1912] focus:outline-none focus:ring-2 focus:ring-[#D8B47A] transition-all text-xl font-light leading-none select-none"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSaveProduct} className="space-y-4 text-xs">
               <div>
-                <label className="text-gray-400 block mb-1">Product Name</label>
+                <label className="text-gray-300 block mb-1 font-medium">Piece Name *</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Emerald & Solitaire Art-Deco Ring"
-                  value={newProdName}
-                  onChange={(e) => setNewProdName(e.target.value)}
-                  className="w-full bg-[#18140F] border border-[#2B2319] rounded p-2 text-white"
+                  placeholder="e.g. Imperial Emerald & Solitaire Art-Deco Ring"
+                  value={prodName}
+                  onChange={(e) => {
+                    setProdName(e.target.value);
+                    setFormIsDirty(true);
+                  }}
+                  className="w-full bg-[#18140F] border border-[#2B2319] focus:border-[#D8B47A] rounded-lg p-2.5 text-white focus:outline-none"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-gray-400 block mb-1">Category</label>
+                  <label className="text-gray-300 block mb-1 font-medium">SKU Reference</label>
+                  <input
+                    type="text"
+                    required
+                    value={prodSku}
+                    onChange={(e) => {
+                      setProdSku(e.target.value);
+                      setFormIsDirty(true);
+                    }}
+                    className="w-full bg-[#18140F] border border-[#2B2319] focus:border-[#D8B47A] rounded-lg p-2.5 text-white font-mono focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-gray-300 block mb-1 font-medium">Category</label>
                   <select
-                    value={newProdCategory}
-                    onChange={(e) => setNewProdCategory(e.target.value)}
-                    className="w-full bg-[#18140F] border border-[#2B2319] rounded p-2 text-white"
+                    value={prodCategory}
+                    onChange={(e) => {
+                      setProdCategory(e.target.value);
+                      setFormIsDirty(true);
+                    }}
+                    className="w-full bg-[#18140F] border border-[#2B2319] focus:border-[#D8B47A] rounded-lg p-2.5 text-white focus:outline-none"
                   >
-                    {['Rings', 'Necklaces', 'Earrings', 'Bracelets', 'Bangles', 'Bridal Jewellery'].map((c) => (
+                    {[
+                      'Rings', 
+                      'Necklaces', 
+                      'Earrings', 
+                      'Bracelets', 
+                      'Bangles', 
+                      'Pendants',
+                      'Bridal Jewellery',
+                      'New Arrivals'
+                    ].map((c) => (
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="text-gray-400 block mb-1">Purity</label>
+                  <label className="text-gray-300 block mb-1 font-medium">Gold Purity</label>
                   <select
-                    value={newProdPurity}
-                    onChange={(e) => setNewProdPurity(e.target.value)}
-                    className="w-full bg-[#18140F] border border-[#2B2319] rounded p-2 text-white"
+                    value={prodPurity}
+                    onChange={(e) => {
+                      setProdPurity(e.target.value);
+                      setFormIsDirty(true);
+                    }}
+                    className="w-full bg-[#18140F] border border-[#2B2319] focus:border-[#D8B47A] rounded-lg p-2.5 text-white focus:outline-none"
                   >
-                    {['24K', '22K', '18K', '14K'].map((p) => (
-                      <option key={p} value={p}>{p} Gold</option>
+                    {['24K', '22K', '18K', '14K', '950 Platinum', '925 Silver'].map((p) => (
+                      <option key={p} value={p}>{p}</option>
                     ))}
                   </select>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-gray-400 block mb-1">Price (₹)</label>
-                  <input
-                    type="number"
-                    required
-                    value={newProdPrice}
-                    onChange={(e) => setNewProdPrice(parseInt(e.target.value) || 0)}
-                    className="w-full bg-[#18140F] border border-[#2B2319] rounded p-2 text-white"
-                  />
-                </div>
-                <div>
-                  <label className="text-gray-400 block mb-1">Gross Weight (Grams)</label>
+                  <label className="text-gray-300 block mb-1 font-medium">Gross Weight (g)</label>
                   <input
                     type="number"
                     step="0.1"
                     required
-                    value={newProdWeight}
-                    onChange={(e) => setNewProdWeight(parseFloat(e.target.value) || 1)}
-                    className="w-full bg-[#18140F] border border-[#2B2319] rounded p-2 text-white"
+                    value={prodWeight}
+                    onChange={(e) => {
+                      setProdWeight(parseFloat(e.target.value) || 0);
+                      setFormIsDirty(true);
+                    }}
+                    className="w-full bg-[#18140F] border border-[#2B2319] focus:border-[#D8B47A] rounded-lg p-2.5 text-white focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-gray-300 block mb-1 font-medium">Vault Stock</label>
+                  <input
+                    type="number"
+                    required
+                    value={prodStock}
+                    onChange={(e) => {
+                      setProdStock(parseInt(e.target.value) || 0);
+                      setFormIsDirty(true);
+                    }}
+                    className="w-full bg-[#18140F] border border-[#2B2319] focus:border-[#D8B47A] rounded-lg p-2.5 text-white focus:outline-none"
                   />
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-[#241F18] flex justify-between">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-gray-300 block mb-1 font-medium">Vault Price (₹) *</label>
+                  <input
+                    type="number"
+                    required
+                    value={prodPrice}
+                    onChange={(e) => {
+                      setProdPrice(parseInt(e.target.value) || 0);
+                      setFormIsDirty(true);
+                    }}
+                    className="w-full bg-[#18140F] border border-[#2B2319] focus:border-[#D8B47A] rounded-lg p-2.5 text-white font-bold text-sm focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-gray-300 block mb-1 font-medium">Design Style</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Rajputana Royal Filigree"
+                    value={prodStyle}
+                    onChange={(e) => {
+                      setProdStyle(e.target.value);
+                      setFormIsDirty(true);
+                    }}
+                    className="w-full bg-[#18140F] border border-[#2B2319] focus:border-[#D8B47A] rounded-lg p-2.5 text-white focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-gray-300 block mb-1 font-medium">Image URL</label>
+                <input
+                  type="url"
+                  placeholder="https://images.unsplash.com/..."
+                  value={prodImageUrl}
+                  onChange={(e) => {
+                    setProdImageUrl(e.target.value);
+                    setFormIsDirty(true);
+                  }}
+                  className="w-full bg-[#18140F] border border-[#2B2319] focus:border-[#D8B47A] rounded-lg p-2.5 text-white focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-gray-300 block mb-1 font-medium">Description</label>
+                <textarea
+                  rows={2}
+                  placeholder="Masterpiece provenance, gemstone characteristics, and styling..."
+                  value={prodDescription}
+                  onChange={(e) => {
+                    setProdDescription(e.target.value);
+                    setFormIsDirty(true);
+                  }}
+                  className="w-full bg-[#18140F] border border-[#2B2319] focus:border-[#D8B47A] rounded-lg p-2.5 text-white focus:outline-none"
+                />
+              </div>
+
+              {/* Published Toggle */}
+              <div className="flex items-center gap-3 pt-1">
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={prodPublished}
+                    onChange={(e) => {
+                      setProdPublished(e.target.checked);
+                      setFormIsDirty(true);
+                    }}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#D8B47A]"></div>
+                </label>
+                <span className="text-xs text-gray-300">
+                  {prodPublished ? 'Published to Customer Boutique' : 'Save as Unpublished Draft'}
+                </span>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-4 border-t border-[#241F18] flex items-center justify-between gap-3">
                 <button
                   type="button"
-                  onClick={() => setNewProductModal(false)}
-                  className="text-gray-400 hover:text-white"
+                  onClick={handleCloseModal}
+                  className="px-4 py-2.5 rounded-lg border border-[#2B2319] text-gray-400 hover:text-white hover:border-gray-500 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 rounded-lg bg-[#D8B47A] text-[#090806] font-bold uppercase tracking-wider"
+                  disabled={savingProduct}
+                  className="px-6 py-2.5 rounded-lg bg-[#D8B47A] hover:bg-[#EBD5A8] text-[#090806] font-bold uppercase tracking-wider text-xs transition-colors disabled:opacity-50"
                 >
-                  Publish Piece
+                  {savingProduct ? 'Saving to Vault...' : editingProductId ? 'Save Creation' : 'Publish Piece'}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
     </div>
   );
 };

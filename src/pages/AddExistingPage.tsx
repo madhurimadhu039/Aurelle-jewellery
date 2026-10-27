@@ -23,9 +23,9 @@ export const AddExistingPage: React.FC = () => {
     e.preventDefault();
     const newSubmission: ExistingJewellerySubmission = {
       id: 'sub-' + Date.now(),
-      customerName: user.name,
-      phone: user.phone || '+91 98765 43210',
-      email: user.email,
+      customerName: user?.name || 'Patron',
+      phone: user?.phone || '+91 98765 43210',
+      email: user?.email || 'patron@example.com',
       billNumber: billNumber || undefined,
       purchaseDate: purchaseDate || undefined,
       description,

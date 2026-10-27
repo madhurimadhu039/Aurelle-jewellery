@@ -35,6 +35,7 @@ export interface Product {
   isFeatured?: boolean;
   isNewArrival?: boolean;
   isBridal?: boolean;
+  isPublished?: boolean;
   rating: number;
   reviewsCount: number;
   dimensions?: string;
