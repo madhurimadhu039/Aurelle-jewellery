@@ -557,12 +557,12 @@ export const HomePage: React.FC = () => {
                     <div className="relative aspect-square bg-[#0C0A08] overflow-hidden">
                       <Link to={`/product/${prod.id}`} className="block w-full h-full">
                         <img
-                          src={prod.images[0] || (prod.category === 'Bracelets' ? '/images/bracelet-1.jpg' : '/images/editorial-ring.jpg')}
+                          src={prod.images[0] || (prod.category === 'Bracelets' ? '/images/bracelet-2.jpg' : '/images/editorial-ring.jpg')}
                           alt={prod.name}
                           onError={(e) => {
                             const target = e.currentTarget;
                             if (prod.category === 'Bracelets') {
-                              target.src = '/images/bracelet-1.jpg';
+                              target.src = '/images/bracelet-2.jpg';
                             } else {
                               target.src = '/images/editorial-ring.jpg';
                             }

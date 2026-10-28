@@ -47,21 +47,56 @@ export const productService = {
       localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(products));
     }
 
-    // Auto-heal bracelet images if needed
+    // Ensure product images are distinct and not colliding with collection images
+    let hasUpdatedImages = false;
     products = products.map((p) => {
       const isPublished = p.isPublished !== false; // Default true
+      const defaultMatch = MOCK_PRODUCTS.find((mp) => mp.id === p.id);
+
+      // Auto-heal bracelet images to distinct project assets
       if (p.id === 'aur-004' || p.category === 'Bracelets') {
-        const hasBroken = !p.images || !p.images.length || p.images.some((img) => img.includes('photo-1611591475155'));
-        if (hasBroken) {
+        const hasOldOrBroken = !p.images || !p.images.length || 
+          p.images.some((img) => img.includes('photo-1611591475155')) ||
+          p.images[0] === '/images/bracelet-1.jpg';
+        if (hasOldOrBroken) {
+          hasUpdatedImages = true;
           return {
             ...p,
             isPublished,
-            images: ['/images/bracelet-1.jpg', '/images/bracelet-2.jpg'],
+            images: ['/images/bracelet-2.jpg', '/images/bracelet-1.jpg'],
           };
         }
       }
+
+      // Check if product is still using old collection duplicate images
+      if (defaultMatch && p.images && p.images.length > 0) {
+        const isOldDuplicate =
+          (p.id === 'aur-001' && p.images[0].includes('photo-1605100804763')) ||
+          (p.id === 'aur-002' && p.images[0].includes('photo-1599643478518')) ||
+          (p.id === 'aur-003' && p.images[0].includes('photo-1630019852942')) ||
+          (p.id === 'aur-005' && p.images[0].includes('photo-1598560917505')) ||
+          (p.id === 'aur-006' && p.images[0].includes('photo-1515562141207'));
+
+        if (isOldDuplicate) {
+          hasUpdatedImages = true;
+          return {
+            ...p,
+            isPublished,
+            images: defaultMatch.images,
+          };
+        }
+      }
+
       return { ...p, isPublished };
     });
+
+    if (hasUpdatedImages && stored) {
+      try {
+        localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(products));
+      } catch (e) {
+        console.warn('Could not update cached products in storage', e);
+      }
+    }
 
     if (!includeUnpublished) {
       return products.filter((p) => p.isPublished !== false);

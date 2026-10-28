@@ -25,7 +25,7 @@ export const MOCK_PRODUCTS: Product[] = [
     price: 128000,
     originalPrice: 142000,
     images: [
-      'https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1602751584552-8ba73aad10e1?auto=format&fit=crop&w=900&q=80',
       'https://images.unsplash.com/photo-1603561591411-07134e71a2a9?auto=format&fit=crop&w=900&q=80'
     ],
     material: 'Yellow Gold & Solitaire Diamond',
@@ -59,8 +59,8 @@ export const MOCK_PRODUCTS: Product[] = [
     price: 245000,
     originalPrice: 275000,
     images: [
-      'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=900&q=80',
-      'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=900&q=80'
+      'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1599643477877-530eb83abc8e?auto=format&fit=crop&w=900&q=80'
     ],
     material: '18K White Gold with Natural Diamonds',
     purity: '18K',
@@ -92,8 +92,8 @@ export const MOCK_PRODUCTS: Product[] = [
     price: 98000,
     originalPrice: 108000,
     images: [
-      'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=900&q=80',
-      'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=900&q=80'
+      'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1635767798638-3e25273a8236?auto=format&fit=crop&w=900&q=80'
     ],
     material: '22K Hallmarked Gold',
     purity: '22K',
@@ -123,8 +123,8 @@ export const MOCK_PRODUCTS: Product[] = [
     price: 175000,
     originalPrice: 190000,
     images: [
-      '/images/bracelet-1.jpg',
-      '/images/bracelet-2.jpg'
+      '/images/bracelet-2.jpg',
+      '/images/bracelet-1.jpg'
     ],
     material: '18K Yellow Gold with Diamonds',
     purity: '18K',
@@ -153,7 +153,7 @@ export const MOCK_PRODUCTS: Product[] = [
     price: 215000,
     originalPrice: 230000,
     images: [
-      'https://images.unsplash.com/photo-1598560917505-59a3ad559071?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1535632787350-4e68ef0ac584?auto=format&fit=crop&w=900&q=80',
       'https://images.unsplash.com/photo-1603561591411-07134e71a2a9?auto=format&fit=crop&w=900&q=80'
     ],
     material: 'Pure 22K Solid Gold',
@@ -180,8 +180,8 @@ export const MOCK_PRODUCTS: Product[] = [
     price: 64000,
     originalPrice: 72000,
     images: [
-      'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=900&q=80',
-      'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=900&q=80'
+      'https://images.unsplash.com/photo-1599643477877-530eb83abc8e?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=900&q=80'
     ],
     material: '18K Rose Gold & Diamond',
     purity: '18K',
