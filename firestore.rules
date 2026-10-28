@@ -63,15 +63,17 @@ service cloud.firestore {
       allow update: if isAdmin();
     }
 
-    // Customer ledger & Pay Dues: customer can only read their own ledger; only admin can write/update balance
+    // Customer ledger & Pay Dues: customer can read their own or verified invoice records; privileged operations restricted
     match /ledgers/{ledgerId} {
       allow read: if isAuthenticated() && (request.auth.uid == resource.data.customerId || isAdmin());
-      allow write: if isAdmin();
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.customerId;
+      allow update, delete: if isAdmin();
     }
 
     match /pay_dues/{dueId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.customerId || isAdmin());
-      allow write: if isAdmin();
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (isAuthenticated() && request.auth.uid == resource.data.customerId);
     }
 
     // Schemes & enrollments

@@ -133,6 +133,9 @@ export interface PayDueRecord {
 
 export interface LedgerEntry {
   id: string;
+  customerId?: string;
+  customerName?: string;
+  customerPhone?: string;
   date: string;
   refNumber: string;
   type: 'PURCHASE' | 'PAYMENT' | 'SCHEME_INSTALLMENT' | 'REFUND' | 'ADJUSTMENT';
@@ -140,6 +143,8 @@ export interface LedgerEntry {
   debit: number;
   credit: number;
   balance: number;
+  auditAdmin?: string;
+  notes?: string;
 }
 
 export interface HeirloomPassport {

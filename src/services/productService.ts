@@ -146,6 +146,16 @@ export const productService = {
   },
 
   /**
+   * Deduct stock after order completion
+   */
+  async deductStock(productId: string, quantity: number): Promise<Product | undefined> {
+    const product = productService.getById(productId);
+    if (!product) return undefined;
+    const newStock = Math.max(0, product.stock - quantity);
+    return productService.saveProduct({ ...product, stock: newStock });
+  },
+
+  /**
    * Delete product from Firebase & Local Cache
    */
   async deleteProduct(id: string): Promise<void> {

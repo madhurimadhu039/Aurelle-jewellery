@@ -273,6 +273,52 @@ export const rateService = {
     const now = new Date();
     const isWeekend = now.getDay() === 0 || now.getDay() === 6; // Sunday = 0, Saturday = 6
 
+    // 2.5 Option 0: Check Vercel backend serverless bullion rate feed
+    try {
+      const serverlessRes = await fetch('/api/bullion-rates', {
+        headers: { Accept: 'application/json' },
+        signal: AbortSignal.timeout(4000),
+      });
+      if (serverlessRes.ok) {
+        const payload = await serverlessRes.json();
+        if (payload?.success && payload?.rates?.gold24k && payload?.rates?.gold22k) {
+          const { dateStr, timeStr, fullStr } = formatDate(now);
+          const serverRates: MetalRateData = {
+            ...current,
+            gold24k: payload.rates.gold24k,
+            gold22k: payload.rates.gold22k,
+            silver1g: payload.rates.silver1g || current.silver1g,
+            goldChange24h: payload.rates.goldChange24h ?? current.goldChange24h,
+            silverChange24h: payload.rates.silverChange24h ?? current.silverChange24h,
+            rateStatus: payload.rateStatus || (isWeekend ? 'delayed' : 'current'),
+            dateFormatted: payload.rates.dateFormatted || dateStr,
+            timeFormatted: payload.rates.timeFormatted || timeStr,
+            lastUpdated: payload.rates.lastUpdated || fullStr,
+            isLive: payload.isLive ?? !isWeekend,
+            provider: payload.provider || 'National Bullion Market Standard (INR Spot Feed)',
+            providerId: payload.providerId || 'auto-bullion',
+            unit: '₹ per gram',
+            isManualOverride: false,
+            lastFetchedAt: Date.now(),
+          };
+
+          if (isFirebaseConfigured && db) {
+            try {
+              await setDoc(doc(db, 'rate_snapshots', 'latest'), serverRates, { merge: true });
+            } catch (e) {
+              console.warn('Could not sync live rate to Firestore:', e);
+            }
+          }
+
+          localStorage.setItem(RATES_STORAGE_KEY, JSON.stringify(serverRates));
+          notifyRateListeners(serverRates);
+          return { rates: serverRates, source: 'live-feed', message: payload.message || 'Rates synchronized from serverless bullion feed.' };
+        }
+      }
+    } catch {
+      // Serverless endpoint not reachable in standalone dev mode or network offline; proceed to direct client options
+    }
+
     // 3. Option A: Dedicated GoldAPI.io if configured
     const apiKey = config.apiKey || import.meta.env.VITE_GOLD_API_KEY;
     if (config.providerId === 'goldapi' && apiKey && !apiKey.includes('your_bullion')) {

@@ -88,14 +88,14 @@ export const ProductDetailPage: React.FC = () => {
           <div className="space-y-4">
             <div className="relative aspect-square rounded-2xl overflow-hidden bg-[#12100C] border border-[#2B2319] group">
               <img
-                src={product.images[selectedImageIndex] || product.images[0] || (product.category === 'Bracelets' ? '/images/bracelet-1.jpg' : '/images/aurelle_editorial_ring.jpg')}
+                src={product.images[selectedImageIndex] || product.images[0] || (product.category === 'Bracelets' ? '/images/bracelet-1.jpg' : '/images/editorial-ring.jpg')}
                 alt={product.name}
                 onError={(e) => {
                   const target = e.currentTarget;
                   if (product.category === 'Bracelets') {
                     target.src = '/images/bracelet-1.jpg';
                   } else {
-                    target.src = '/images/aurelle_editorial_ring.jpg';
+                    target.src = '/images/editorial-ring.jpg';
                   }
                 }}
                 className="w-full h-full object-cover object-center transform transition-transform duration-700 ease-out group-hover:scale-115 cursor-crosshair"

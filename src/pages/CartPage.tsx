@@ -4,6 +4,7 @@ import { Trash2, ShoppingBag, ShieldCheck, ArrowRight, CheckCircle2, Sparkles } 
 import confetti from 'canvas-confetti';
 import { useApp } from '../contexts/AppContext';
 import { productService } from '../services/productService';
+import { orderService } from '../services/orderService';
 
 export const CartPage: React.FC = () => {
   const { cart, removeFromCart, updateQuantity, clearCart, cartSubtotal, formatINR, user } = useApp();
@@ -62,6 +63,43 @@ export const CartPage: React.FC = () => {
     }
 
     const newOrderId = `AUR-ORD-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    // Persist real order record
+    orderService.createOrder({
+      orderNumber: newOrderId,
+      items: cart.map((c) => ({
+        id: c.product.id,
+        name: c.product.name,
+        sku: c.product.sku,
+        price: c.product.price,
+        quantity: c.quantity,
+        image: c.product.images[0] || '/images/hero-model.jpg',
+        purity: c.product.purity,
+      })),
+      subtotal: validatedSubtotal,
+      tax: gstAmount,
+      discount,
+      shipping: 0,
+      total: finalTotal,
+      customer: {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        city: formData.city,
+        pincode: formData.pincode,
+        state: 'Maharashtra',
+      },
+      paymentMethod: formData.paymentMode as any,
+      paymentStatus: 'PAID',
+      status: 'CONFIRMED',
+    }).catch(() => {});
+
+    // Deduct stock in real time
+    for (const item of cart) {
+      productService.deductStock(item.product.id, item.quantity).catch(() => {});
+    }
+
     setOrderId(newOrderId);
     setOrderComplete(true);
     clearCart();

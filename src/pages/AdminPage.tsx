@@ -30,7 +30,9 @@ import { useApp } from '../contexts/AppContext';
 import { productService } from '../services/productService';
 import { payDueService } from '../services/payDueService';
 import { rateService } from '../services/rateService';
-import { Product, PayDueRecord, ExistingJewellerySubmission } from '../types';
+import { schemeService } from '../services/schemeService';
+import { ledgerService } from '../services/ledgerService';
+import { Product, PayDueRecord, ExistingJewellerySubmission, Scheme, SchemeEnrollment, LedgerEntry } from '../types';
 import { MOCK_SUBMISSIONS } from '../data/mockData';
 
 export const AdminPage: React.FC = () => {
@@ -52,7 +54,7 @@ export const AdminPage: React.FC = () => {
   const [loginError, setLoginError] = useState<string | null>(null);
 
   // Tabs
-  const [activeTab, setActiveTab] = useState<'products' | 'rates' | 'dues' | 'submissions'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'rates' | 'dues' | 'schemes' | 'ledger' | 'submissions'>('products');
 
   // Products state (includes unpublished)
   const [products, setProducts] = useState<Product[]>(() => productService.getAll(true));
@@ -109,6 +111,32 @@ export const AdminPage: React.FC = () => {
     const saved = localStorage.getItem('aurelle_existing_submissions');
     return saved ? JSON.parse(saved) : MOCK_SUBMISSIONS;
   });
+
+  // Schemes State
+  const [schemes, setSchemes] = useState<Scheme[]>(() => schemeService.getSchemes());
+  const [enrollments, setEnrollments] = useState<SchemeEnrollment[]>(() => schemeService.getEnrollments());
+  const [schemeModalOpen, setSchemeModalOpen] = useState(false);
+  const [editingSchemeId, setEditingSchemeId] = useState<string | null>(null);
+  const [schName, setSchName] = useState('');
+  const [schTagline, setSchTagline] = useState('');
+  const [schDuration, setSchDuration] = useState(11);
+  const [schMinAmount, setSchMinAmount] = useState(5000);
+  const [schBonusPercent, setSchBonusPercent] = useState(100);
+  const [schBenefits, setSchBenefits] = useState('100% 11th Month Aurelle Bonus, Zero Making Charges up to 18%, Complimentary BIS Assaying');
+  const [schTerms, setSchTerms] = useState('10 monthly deposits required, Redeemable across gold and diamond collections, Non-transferable folio');
+
+  // Customer Ledger State
+  const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>(() => ledgerService.getEntries());
+  const [ledgerCustomerFilter, setLedgerCustomerFilter] = useState('');
+  const [ledgerModalOpen, setLedgerModalOpen] = useState(false);
+  const [ledCustomer, setLedCustomer] = useState('');
+  const [ledPhone, setLedPhone] = useState('');
+  const [ledRef, setLedRef] = useState('');
+  const [ledType, setLedType] = useState<'PURCHASE' | 'PAYMENT' | 'REFUND' | 'ADJUSTMENT'>('ADJUSTMENT');
+  const [ledDebit, setLedDebit] = useState(0);
+  const [ledCredit, setLedCredit] = useState(0);
+  const [ledDesc, setLedDesc] = useState('');
+  const [ledNotes, setLedNotes] = useState('');
 
   // Listen to keyboard Escape key when modal is open
   useEffect(() => {
@@ -379,6 +407,143 @@ export const AdminPage: React.FC = () => {
     }
   };
 
+  // Scheme Handlers
+  const handleOpenNewScheme = () => {
+    setEditingSchemeId(null);
+    setSchName('');
+    setSchTagline('Exclusive Monthly Savings Initiative');
+    setSchDuration(11);
+    setSchMinAmount(5000);
+    setSchBonusPercent(100);
+    setSchemeModalOpen(true);
+  };
+
+  const handleOpenEditScheme = (s: Scheme) => {
+    setEditingSchemeId(s.id);
+    setSchName(s.name);
+    setSchTagline(s.tagline);
+    setSchDuration(s.durationMonths);
+    setSchMinAmount(s.minAmount);
+    setSchBonusPercent(s.bonusPercentage);
+    setSchBenefits(s.benefits.join(', '));
+    setSchTerms(s.terms.join(', '));
+    setSchemeModalOpen(true);
+  };
+
+  const handleSaveScheme = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!schName.trim()) {
+      alert('Scheme name is required');
+      return;
+    }
+    const payload: Scheme = {
+      id: editingSchemeId || ('scheme-' + Date.now()),
+      name: schName.trim(),
+      tagline: schTagline.trim() || 'Exclusive Monthly Savings Initiative',
+      durationMonths: Number(schDuration),
+      minAmount: Number(schMinAmount),
+      monthlyOptions: [schMinAmount, schMinAmount * 2, schMinAmount * 4, schMinAmount * 10],
+      bonusPercentage: Number(schBonusPercent),
+      benefits: schBenefits.split(',').map((b) => b.trim()).filter(Boolean),
+      terms: schTerms.split(',').map((t) => t.trim()).filter(Boolean),
+    };
+    await schemeService.saveScheme(payload);
+    setSchemes(schemeService.getSchemes());
+    setSchemeModalOpen(false);
+    showToast(`Scheme "${payload.name}" saved successfully`, 'success');
+  };
+
+  const handleDeleteScheme = async (id: string, name: string) => {
+    if (window.confirm(`Delete savings scheme "${name}"?`)) {
+      await schemeService.deleteScheme(id);
+      setSchemes(schemeService.getSchemes());
+      showToast('Scheme deleted', 'info');
+    }
+  };
+
+  const handleAdminRecordSchemePayment = (enrollmentId: string) => {
+    try {
+      const updated = schemeService.payInstallment(enrollmentId, 'In-Boutique Certified Remittance');
+      setEnrollments([...schemeService.getEnrollments()]);
+      setLedgerEntries(ledgerService.getEntries());
+      showToast(`Installment #${updated.installmentsPaid} recorded for ${updated.customerName}`, 'success');
+    } catch (e: any) {
+      alert(e.message);
+    }
+  };
+
+  // Ledger Handlers
+  const handleSaveLedgerEntry = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ledCustomer.trim()) {
+      alert('Customer name is required');
+      return;
+    }
+    if (!ledNotes.trim()) {
+      alert('Mandatory audit notes required for ledger adjustments');
+      return;
+    }
+    ledgerService.addEntry({
+      date: new Date().toISOString().split('T')[0],
+      refNumber: ledRef.trim() || `AUD-ADJ-${Math.floor(100000 + Math.random() * 900000)}`,
+      type: ledType,
+      description: ledDesc.trim() || `Administrative ${ledType} adjustment`,
+      debit: Number(ledDebit) || 0,
+      credit: Number(ledCredit) || 0,
+      customerName: ledCustomer.trim(),
+      customerPhone: ledPhone.trim(),
+      auditAdmin: user?.name || user?.email || 'Authorized Administrator',
+      notes: ledNotes.trim(),
+    });
+    setLedgerEntries(ledgerService.getEntries());
+    setLedgerModalOpen(false);
+    setLedCustomer('');
+    setLedPhone('');
+    setLedRef('');
+    setLedDebit(0);
+    setLedCredit(0);
+    setLedDesc('');
+    setLedNotes('');
+    showToast('Customer ledger entry verified and recorded', 'success');
+  };
+
+  // Assay Approval with automatic exchange credit to customer ledger
+  const handleApproveSubmissionWithCredit = (sub: ExistingJewellerySubmission) => {
+    const valuationStr = window.prompt(
+      `Enter verified assay exchange valuation for ${sub.customerName}'s ${sub.metalType} (${sub.estimatedWeightGrams}g):`,
+      '125000'
+    );
+    if (!valuationStr) return;
+    const valuation = parseInt(valuationStr);
+    if (isNaN(valuation) || valuation <= 0) {
+      alert('Invalid valuation amount entered.');
+      return;
+    }
+
+    const updated = submissions.map((s) =>
+      s.id === sub.id ? { ...s, status: 'VERIFIED' as const, staffNotes: `Assay Verified: Valuation ₹${valuation.toLocaleString('en-IN')}` } : s
+    );
+    setSubmissions(updated);
+    localStorage.setItem('aurelle_existing_submissions', JSON.stringify(updated));
+
+    // Register exchange credit in Customer Ledger
+    ledgerService.addEntry({
+      date: new Date().toISOString().split('T')[0],
+      refNumber: `EXC-ASSAY-${sub.id.slice(-6).toUpperCase()}`,
+      type: 'ADJUSTMENT',
+      description: `Old-Gold Exchange Credit: ${sub.metalType} (${sub.estimatedWeightGrams}g)`,
+      debit: 0,
+      credit: valuation,
+      customerName: sub.customerName,
+      customerPhone: sub.phone,
+      auditAdmin: user?.name || 'Assay Desk Master',
+      notes: `Purity Assay Verified: ${sub.description}`,
+    });
+    setLedgerEntries(ledgerService.getEntries());
+
+    showToast(`Assay verified and credit of ₹${valuation.toLocaleString('en-IN')} added to ${sub.customerName}'s ledger!`, 'success');
+  };
+
   // Update Submission Status
   const handleUpdateSubmissionStatus = (id: string, newStatus: ExistingJewellerySubmission['status']) => {
     const updated = submissions.map((sub) => 
@@ -565,6 +730,26 @@ export const AdminPage: React.FC = () => {
             }`}
           >
             Pay Due Invoices ({payDues.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('schemes')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+              activeTab === 'schemes'
+                ? 'bg-[#D8B47A] text-[#090806]'
+                : 'text-gray-400 hover:text-white bg-[#120F0B]'
+            }`}
+          >
+            Savings Schemes ({schemes.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('ledger')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+              activeTab === 'ledger'
+                ? 'bg-[#D8B47A] text-[#090806]'
+                : 'text-gray-400 hover:text-white bg-[#120F0B]'
+            }`}
+          >
+            Customer Ledger ({ledgerEntries.length})
           </button>
           <button
             onClick={() => setActiveTab('submissions')}
@@ -1097,6 +1282,231 @@ export const AdminPage: React.FC = () => {
           </div>
         )}
 
+        {/* Tab 4: Schemes Management */}
+        {activeTab === 'schemes' && (
+          <div className="space-y-8">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+              <div>
+                <h3 className="font-serif-luxury text-xl font-bold text-white">Jewellery Savings Schemes Suite</h3>
+                <p className="text-xs text-gray-400">Configure scheme duration, bonus terms, and monitor customer installment folios.</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleOpenNewScheme}
+                className="px-4 py-2 rounded-lg bg-[#D8B47A] text-[#090806] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 hover:bg-[#EBD5A8] transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create New Scheme</span>
+              </button>
+            </div>
+
+            {/* Configured Schemes Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {schemes.map((s) => (
+                <div key={s.id} className="bg-[#120F0B] border border-[#241F18] rounded-xl p-5 space-y-3 text-xs">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-serif-luxury text-base font-bold text-white">{s.name}</h4>
+                      <p className="text-[11px] text-[#D8B47A] font-medium">{s.tagline}</p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleOpenEditScheme(s)}
+                        className="p-1.5 text-gray-400 hover:text-[#D8B47A] rounded hover:bg-[#1E1912]"
+                        title="Edit Scheme"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteScheme(s.id, s.name)}
+                        className="p-1.5 text-gray-400 hover:text-rose-400 rounded hover:bg-[#1E1912]"
+                        title="Delete Scheme"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 bg-[#0E0C09] p-3 rounded-lg border border-[#1C1712] text-center">
+                    <div>
+                      <span className="text-[10px] text-gray-500 uppercase block">Duration</span>
+                      <strong className="text-white text-xs">{s.durationMonths} Months</strong>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-gray-500 uppercase block">Min Deposit</span>
+                      <strong className="text-[#D8B47A] text-xs">{formatINR(s.minAmount)}</strong>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-gray-500 uppercase block">Guild Bonus</span>
+                      <strong className="text-emerald-400 text-xs">{s.bonusPercentage}% (1 Month)</strong>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] uppercase tracking-wider text-gray-400 block mb-1">Patron Benefits:</span>
+                    <ul className="list-disc list-inside text-[11px] text-gray-300 space-y-0.5">
+                      {s.benefits.slice(0, 3).map((b, i) => (
+                        <li key={i}>{b}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Active Enrollments Table */}
+            <div className="space-y-3 pt-4">
+              <h4 className="font-serif-luxury text-lg font-bold text-white">Active Customer Scheme Folios ({enrollments.length})</h4>
+              <div className="bg-[#120F0B] border border-[#241F18] rounded-xl overflow-hidden shadow-xl">
+                <table className="w-full text-xs text-left">
+                  <thead>
+                    <tr className="border-b border-[#241F18] bg-[#0E0C09] text-gray-400 uppercase text-[10px] tracking-wider">
+                      <th className="p-3.5">Folio / Patron</th>
+                      <th className="p-3.5">Scheme</th>
+                      <th className="p-3.5">Monthly Amount</th>
+                      <th className="p-3.5">Installments Paid</th>
+                      <th className="p-3.5">Next Due</th>
+                      <th className="p-3.5">Status</th>
+                      <th className="p-3.5 text-right">In-Store Remittance</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#1C1712] text-gray-300">
+                    {enrollments.map((enr) => (
+                      <tr key={enr.id} className="hover:bg-[#16120D] transition-colors">
+                        <td className="p-3.5">
+                          <span className="font-mono font-bold text-[#D8B47A] block">{enr.id}</span>
+                          <span className="font-medium text-white">{enr.customerName}</span>
+                          <span className="text-[10px] text-gray-500 block">{enr.customerPhone}</span>
+                        </td>
+                        <td className="p-3.5">{enr.schemeName}</td>
+                        <td className="p-3.5 font-bold text-white">{formatINR(enr.monthlyAmount)}</td>
+                        <td className="p-3.5">
+                          <span className="font-semibold text-emerald-400">{enr.installmentsPaid}</span> / {enr.tenureMonths} Paid
+                        </td>
+                        <td className="p-3.5 font-mono text-gray-400">{enr.nextDueDate}</td>
+                        <td className="p-3.5">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                            {enr.status}
+                          </span>
+                        </td>
+                        <td className="p-3.5 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleAdminRecordSchemePayment(enr.id)}
+                            className="px-2.5 py-1 rounded bg-[#D8B47A]/20 text-[#D8B47A] hover:bg-[#D8B47A] hover:text-[#090806] font-semibold text-[10px] transition-colors"
+                          >
+                            + Record Payment
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 5: Customer Ledger & Statements */}
+        {activeTab === 'ledger' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+              <div>
+                <h3 className="font-serif-luxury text-xl font-bold text-white">Customer Accounts Ledger & Audit Statements</h3>
+                <p className="text-xs text-gray-400">Inspect verified debits, payments, exchange credits, and record audited adjustments.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLedgerModalOpen(true)}
+                className="px-4 py-2 rounded-lg bg-[#D8B47A] text-[#090806] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 hover:bg-[#EBD5A8] transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Record Ledger Adjustment</span>
+              </button>
+            </div>
+
+            {/* Filter by Customer */}
+            <div className="flex items-center gap-3">
+              <input
+                type="text"
+                placeholder="Filter by Customer Name or Mobile..."
+                value={ledgerCustomerFilter}
+                onChange={(e) => setLedgerCustomerFilter(e.target.value)}
+                className="bg-[#120F0B] border border-[#241F18] rounded-xl px-3.5 py-2 text-xs text-white placeholder-gray-500 w-72 focus:outline-none focus:border-[#D8B47A]"
+              />
+              {ledgerCustomerFilter && (
+                <button
+                  type="button"
+                  onClick={() => setLedgerCustomerFilter('')}
+                  className="text-xs text-gray-400 hover:text-white underline"
+                >
+                  Clear Filter
+                </button>
+              )}
+            </div>
+
+            {/* Ledger Statements Table */}
+            <div className="bg-[#120F0B] border border-[#241F18] rounded-2xl overflow-hidden shadow-xl">
+              <table className="w-full text-xs text-left">
+                <thead>
+                  <tr className="border-b border-[#241F18] bg-[#0E0C09] text-gray-400 uppercase text-[10px] tracking-wider">
+                    <th className="p-3.5">Date</th>
+                    <th className="p-3.5">Ref No.</th>
+                    <th className="p-3.5">Customer</th>
+                    <th className="p-3.5">Transaction Type</th>
+                    <th className="p-3.5">Description</th>
+                    <th className="p-3.5 text-right">Debit (₹)</th>
+                    <th className="p-3.5 text-right">Credit (₹)</th>
+                    <th className="p-3.5 text-right">Running Balance</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#1C1712] text-gray-300">
+                  {ledgerEntries
+                    .filter((e) => {
+                      if (!ledgerCustomerFilter) return true;
+                      const term = ledgerCustomerFilter.toLowerCase();
+                      return (
+                        (e.customerName && e.customerName.toLowerCase().includes(term)) ||
+                        (e.customerPhone && e.customerPhone.includes(term)) ||
+                        e.refNumber.toLowerCase().includes(term)
+                      );
+                    })
+                    .map((item) => (
+                      <tr key={item.id} className="hover:bg-[#16120D] transition-colors">
+                        <td className="p-3.5 font-mono text-gray-400">{item.date}</td>
+                        <td className="p-3.5 font-mono text-[#D8B47A] font-semibold">{item.refNumber}</td>
+                        <td className="p-3.5">
+                          <span className="font-semibold text-white block">{item.customerName || 'Boutique Patron'}</span>
+                          {item.customerPhone && <span className="text-[10px] text-gray-500">{item.customerPhone}</span>}
+                        </td>
+                        <td className="p-3.5">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                            item.type === 'PURCHASE' ? 'bg-rose-500/10 text-rose-300' :
+                            item.type === 'PAYMENT' ? 'bg-emerald-500/10 text-emerald-300' :
+                            item.type === 'SCHEME_INSTALLMENT' ? 'bg-amber-500/10 text-amber-300' :
+                            'bg-purple-500/10 text-purple-300'
+                          }`}>
+                            {item.type}
+                          </span>
+                        </td>
+                        <td className="p-3.5 max-w-xs">{item.description}</td>
+                        <td className="p-3.5 text-right text-rose-300 font-medium">
+                          {item.debit > 0 ? formatINR(item.debit) : '—'}
+                        </td>
+                        <td className="p-3.5 text-right text-emerald-400 font-medium">
+                          {item.credit > 0 ? formatINR(item.credit) : '—'}
+                        </td>
+                        <td className="p-3.5 text-right font-serif-luxury font-bold text-white">
+                          {formatINR(item.balance)}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {/* Tab 4: Submissions (Existing Jewellery Appraisals) */}
         {activeTab === 'submissions' && (
           <div className="space-y-6">
@@ -1148,12 +1558,21 @@ export const AdminPage: React.FC = () => {
                       </td>
                       <td className="p-4 text-right space-x-2">
                         {sub.status !== 'VERIFIED' && (
-                          <button
-                            onClick={() => handleUpdateSubmissionStatus(sub.id, 'VERIFIED')}
-                            className="px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500 hover:text-black font-semibold text-[10px]"
-                          >
-                            Approve Assay
-                          </button>
+                          <>
+                            <button
+                              onClick={() => handleApproveSubmissionWithCredit(sub)}
+                              className="px-2.5 py-1 rounded bg-[#D8B47A] text-[#090806] hover:bg-[#EBD5A8] font-bold text-[10px] transition-colors"
+                              title="Appraise piece and add exchange credit to customer ledger"
+                            >
+                              Appraise & Credit Ledger
+                            </button>
+                            <button
+                              onClick={() => handleUpdateSubmissionStatus(sub.id, 'VERIFIED')}
+                              className="px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500 hover:text-black font-semibold text-[10px]"
+                            >
+                              Mark Verified
+                            </button>
+                          </>
                         )}
                         {sub.status !== 'REJECTED' && (
                           <button
@@ -1175,8 +1594,257 @@ export const AdminPage: React.FC = () => {
       </div>
 
       {/* =========================================================
-          3. "ADD JEWELLERY CREATION TO VAULT" POPUP MODAL
-          Fixed with:
+          4. SCHEME CONFIGURATION MODAL
+      ========================================================= */}
+      {schemeModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"
+          onClick={() => setSchemeModalOpen(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="bg-[#120F0B] border border-[#D8B47A]/50 rounded-2xl max-w-lg w-full p-6 text-left shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setSchemeModalOpen(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#1A1510] text-[#D8B47A] hover:text-white border border-[#D8B47A]/30 flex items-center justify-center text-xl"
+            >
+              &times;
+            </button>
+            <h3 className="font-serif-luxury text-lg font-bold text-white mb-4">
+              {editingSchemeId ? 'EDIT SAVINGS SCHEME' : 'CONFIGURE NEW SAVINGS SCHEME'}
+            </h3>
+            <form onSubmit={handleSaveScheme} className="space-y-3.5 text-xs">
+              <div>
+                <label className="text-gray-300 block mb-1">Scheme Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Swarna Nidhi 10+1 Gold Savings"
+                  value={schName}
+                  onChange={(e) => setSchName(e.target.value)}
+                  className="w-full bg-[#18140F] border border-[#2B2319] rounded-lg p-2.5 text-white"
+                />
+              </div>
+              <div>
+                <label className="text-gray-300 block mb-1">Tagline / Subtext</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Exclusive 1-Month Guild Bonus"
+                  value={schTagline}
+                  onChange={(e) => setSchTagline(e.target.value)}
+                  className="w-full bg-[#18140F] border border-[#2B2319] rounded-lg p-2.5 text-white"
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-gray-300 block mb-1">Tenure (Months)</label>
+                  <input
+                    type="number"
+                    required
+                    value={schDuration}
+                    onChange={(e) => setSchDuration(parseInt(e.target.value) || 11)}
+                    className="w-full bg-[#18140F] border border-[#2B2319] rounded-lg p-2.5 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-gray-300 block mb-1">Min Deposit (₹)</label>
+                  <input
+                    type="number"
+                    required
+                    value={schMinAmount}
+                    onChange={(e) => setSchMinAmount(parseInt(e.target.value) || 5000)}
+                    className="w-full bg-[#18140F] border border-[#2B2319] rounded-lg p-2.5 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-gray-300 block mb-1">Bonus %</label>
+                  <input
+                    type="number"
+                    required
+                    value={schBonusPercent}
+                    onChange={(e) => setSchBonusPercent(parseInt(e.target.value) || 100)}
+                    className="w-full bg-[#18140F] border border-[#2B2319] rounded-lg p-2.5 text-white"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-gray-300 block mb-1">Patron Benefits (Comma separated)</label>
+                <input
+                  type="text"
+                  value={schBenefits}
+                  onChange={(e) => setSchBenefits(e.target.value)}
+                  className="w-full bg-[#18140F] border border-[#2B2319] rounded-lg p-2.5 text-white"
+                />
+              </div>
+              <div>
+                <label className="text-gray-300 block mb-1">Scheme Terms (Comma separated)</label>
+                <input
+                  type="text"
+                  value={schTerms}
+                  onChange={(e) => setSchTerms(e.target.value)}
+                  className="w-full bg-[#18140F] border border-[#2B2319] rounded-lg p-2.5 text-white"
+                />
+              </div>
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSchemeModalOpen(false)}
+                  className="px-4 py-2 rounded-lg border border-[#2B2319] text-gray-400"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 rounded-lg bg-[#D8B47A] text-[#090806] font-bold uppercase tracking-wider"
+                >
+                  Save Scheme
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================
+          5. CUSTOMER LEDGER ADJUSTMENT MODAL
+      ========================================================= */}
+      {ledgerModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"
+          onClick={() => setLedgerModalOpen(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="bg-[#120F0B] border border-[#D8B47A]/50 rounded-2xl max-w-lg w-full p-6 text-left shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setLedgerModalOpen(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#1A1510] text-[#D8B47A] hover:text-white border border-[#D8B47A]/30 flex items-center justify-center text-xl"
+            >
+              &times;
+            </button>
+            <h3 className="font-serif-luxury text-lg font-bold text-white mb-4">
+              RECORD AUDITED CUSTOMER LEDGER ADJUSTMENT
+            </h3>
+            <form onSubmit={handleSaveLedgerEntry} className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-gray-300 block mb-1">Customer Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Madhurima Sharma"
+                    value={ledCustomer}
+                    onChange={(e) => setLedCustomer(e.target.value)}
+                    className="w-full bg-[#18140F] border border-[#2B2319] rounded-lg p-2.5 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-gray-300 block mb-1">Customer Mobile</label>
+                  <input
+                    type="tel"
+                    placeholder="98XXXXXXXX"
+                    value={ledPhone}
+                    onChange={(e) => setLedPhone(e.target.value)}
+                    className="w-full bg-[#18140F] border border-[#2B2319] rounded-lg p-2.5 text-white"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-gray-300 block mb-1">Transaction Type</label>
+                  <select
+                    value={ledType}
+                    onChange={(e) => setLedType(e.target.value as any)}
+                    className="w-full bg-[#18140F] border border-[#2B2319] rounded-lg p-2.5 text-white"
+                  >
+                    <option value="PURCHASE">PURCHASE (Debit/Invoice)</option>
+                    <option value="PAYMENT">PAYMENT (Credit/Remittance)</option>
+                    <option value="REFUND">REFUND (Credit/Reversal)</option>
+                    <option value="ADJUSTMENT">ADJUSTMENT (Audit/Exchange)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-gray-300 block mb-1">Reference Number</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. AUR-RCP-901248"
+                    value={ledRef}
+                    onChange={(e) => setLedRef(e.target.value)}
+                    className="w-full bg-[#18140F] border border-[#2B2319] rounded-lg p-2.5 text-white"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-gray-300 block mb-1">Debit Amount (₹)</label>
+                  <input
+                    type="number"
+                    value={ledDebit}
+                    onChange={(e) => setLedDebit(parseInt(e.target.value) || 0)}
+                    className="w-full bg-[#18140F] border border-[#2B2319] rounded-lg p-2.5 text-rose-300 font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="text-gray-300 block mb-1">Credit Amount (₹)</label>
+                  <input
+                    type="number"
+                    value={ledCredit}
+                    onChange={(e) => setLedCredit(parseInt(e.target.value) || 0)}
+                    className="w-full bg-[#18140F] border border-[#2B2319] rounded-lg p-2.5 text-emerald-400 font-bold"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-gray-300 block mb-1">Transaction Description</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Store exchange voucher credit for vintage bangle"
+                  value={ledDesc}
+                  onChange={(e) => setLedDesc(e.target.value)}
+                  className="w-full bg-[#18140F] border border-[#2B2319] rounded-lg p-2.5 text-white"
+                />
+              </div>
+              <div>
+                <label className="text-gray-300 block mb-1">Mandatory Audit Reason / Notes *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Authorized by Boutique Manager for gold assay return"
+                  value={ledNotes}
+                  onChange={(e) => setLedNotes(e.target.value)}
+                  className="w-full bg-[#18140F] border border-[#2B2319] rounded-lg p-2.5 text-white"
+                />
+              </div>
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setLedgerModalOpen(false)}
+                  className="px-4 py-2 rounded-lg border border-[#2B2319] text-gray-400"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 rounded-lg bg-[#D8B47A] text-[#090806] font-bold uppercase tracking-wider"
+                >
+                  Record Entry
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================
+          6. "ADD JEWELLERY CREATION TO VAULT" POPUP MODAL
           - Clearly visible × close mark in top-right corner using actual multiplication sign ×
           - Neat position in header with proper spacing and alignment
           - Accessible type="button", aria-label="Close dialog", visible focus ring
@@ -1211,14 +1879,16 @@ export const AdminPage: React.FC = () => {
                 </h3>
               </div>
 
-              {/* Accessible × Close Mark */}
+              {/* Accessible × Close Button */}
               <button
                 type="button"
+                id="close-vault-modal-btn"
                 onClick={handleCloseModal}
                 aria-label="Close dialog"
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-[#D8B47A] hover:bg-[#1E1912] focus:outline-none focus:ring-2 focus:ring-[#D8B47A] transition-all text-xl font-light leading-none select-none"
+                title="Close (Esc)"
+                className="w-9 h-9 rounded-full bg-[#1A1510] hover:bg-[#251E17] text-[#D8B47A] hover:text-white border border-[#D8B47A]/30 flex items-center justify-center transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#D8B47A]/50 select-none text-2xl font-light leading-none"
               >
-                ×
+                <span aria-hidden="true">&times;</span>
               </button>
             </div>
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sparkles, Check, ArrowRight, ShieldCheck, Calendar, CreditCard, ChevronDown, CheckCircle2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { schemeService } from '../services/schemeService';
@@ -19,6 +19,14 @@ export const SchemePage: React.FC = () => {
   const [enrollName, setEnrollName] = useState(user?.name || 'Madhurima Sharma');
   const [enrollEmail, setEnrollEmail] = useState(user?.email || 'madhurima@example.com');
   const [enrollPhone, setEnrollPhone] = useState(user?.phone || '+91 98765 43210');
+
+  useEffect(() => {
+    if (user) {
+      if (user.name) setEnrollName(user.name);
+      if (user.email) setEnrollEmail(user.email);
+      if (user.phone) setEnrollPhone(user.phone);
+    }
+  }, [user]);
 
   const totalCustomerContribution = monthlyAmount * (selectedScheme.durationMonths - 1);
   const aurelleBonus = monthlyAmount;

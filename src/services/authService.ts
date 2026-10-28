@@ -3,6 +3,7 @@ import {
   createUserWithEmailAndPassword, 
   signOut, 
   onAuthStateChanged,
+  sendPasswordResetEmail,
   updateProfile as fbUpdateProfile,
   User as FirebaseUser
 } from 'firebase/auth';
@@ -224,6 +225,23 @@ export const authService = {
     sessionStorage.setItem(ADMIN_SESSION_VERIFIED_KEY, `verified-${Date.now()}`);
     localStorage.setItem(AUTH_USER_KEY, JSON.stringify(adminProfile));
     return adminProfile;
+  },
+
+  /**
+   * Send Password Reset instructions
+   */
+  async sendPasswordReset(email: string): Promise<string> {
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail || !trimmedEmail.includes('@')) {
+      throw new Error('Please enter a valid registered email address');
+    }
+
+    if (isFirebaseConfigured && auth) {
+      await sendPasswordResetEmail(auth, trimmedEmail);
+      return `Password reset instructions have been dispatched to ${trimmedEmail}.`;
+    }
+
+    return `Password reset instructions have been generated for ${trimmedEmail}.`;
   },
 
   /**

@@ -21,7 +21,7 @@ export const ProductCard: React.FC<Props> = ({ product, onQuickView, onTryOn }) 
       <div className="relative aspect-square overflow-hidden bg-[#0A0907]">
         <Link to={`/product/${product.id}`} className="block w-full h-full">
           <img
-            src={product.images[0] || (product.category === 'Bracelets' ? '/images/bracelet-1.jpg' : '/images/aurelle_editorial_ring.jpg')}
+            src={product.images[0] || (product.category === 'Bracelets' ? '/images/bracelet-1.jpg' : '/images/editorial-ring.jpg')}
             alt={product.name}
             loading="lazy"
             onError={(e) => {
@@ -29,7 +29,7 @@ export const ProductCard: React.FC<Props> = ({ product, onQuickView, onTryOn }) 
               if (product.category === 'Bracelets') {
                 target.src = '/images/bracelet-1.jpg';
               } else {
-                target.src = '/images/aurelle_editorial_ring.jpg';
+                target.src = '/images/editorial-ring.jpg';
               }
             }}
             className="w-full h-full object-cover object-center transform transition-transform duration-700 ease-out group-hover:scale-108"

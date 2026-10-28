@@ -23,7 +23,7 @@ import { Product, PayDueRecord } from '../types';
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
-  const { toggleWishlist, isInWishlist, formatINR, products } = useApp();
+  const { toggleWishlist, isInWishlist, formatINR, products, user, isAdmin } = useApp();
 
   const [heroSlide, setHeroSlide] = useState(0);
   const [payDueQuery, setPayDueQuery] = useState('');
@@ -144,13 +144,29 @@ export const HomePage: React.FC = () => {
     setStatusModalOpen(true);
   };
 
-  const handleOpenVerifiedRecord = () => {
+  const handleOpenVerifiedRecord = async () => {
     if (isVerifying || !statusRecord) return;
     setIsVerifying(true);
-    setTimeout(() => {
-      setIsVerifiedRecordView(true);
+    try {
+      const result = await payDueService.verifyRecord(
+        statusQuery || statusRecord.billNumber, 
+        undefined, 
+        user, 
+        isAdmin
+      );
+      if (result.success && result.record && result.verified) {
+        setStatusRecord(result.record);
+        setIsVerifiedRecordView(true);
+      } else {
+        setStatusModalOpen(false);
+        navigate(`/pay-due?search=${encodeURIComponent(statusRecord.billNumber)}`);
+      }
+    } catch {
+      setStatusModalOpen(false);
+      navigate(`/pay-due?search=${encodeURIComponent(statusRecord.billNumber)}`);
+    } finally {
       setIsVerifying(false);
-    }, 200);
+    }
   };
 
   const currentHero = heroSlides[heroSlide];
@@ -541,14 +557,14 @@ export const HomePage: React.FC = () => {
                     <div className="relative aspect-square bg-[#0C0A08] overflow-hidden">
                       <Link to={`/product/${prod.id}`} className="block w-full h-full">
                         <img
-                          src={prod.images[0] || (prod.category === 'Bracelets' ? '/images/bracelet-1.jpg' : '/images/aurelle_editorial_ring.jpg')}
+                          src={prod.images[0] || (prod.category === 'Bracelets' ? '/images/bracelet-1.jpg' : '/images/editorial-ring.jpg')}
                           alt={prod.name}
                           onError={(e) => {
                             const target = e.currentTarget;
                             if (prod.category === 'Bracelets') {
                               target.src = '/images/bracelet-1.jpg';
                             } else {
-                              target.src = '/images/aurelle_editorial_ring.jpg';
+                              target.src = '/images/editorial-ring.jpg';
                             }
                           }}
                           className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-108"
