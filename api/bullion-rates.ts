@@ -15,17 +15,19 @@ export default async function handler(req: any, res: any) {
   const now = new Date();
   const isWeekend = now.getDay() === 0 || now.getDay() === 6; // Sunday = 0, Saturday = 6
 
-  // Formatter for Indian locale
+  // Formatter for Indian locale in IST
   const dateFormatted = now.toLocaleDateString('en-IN', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
+    timeZone: 'Asia/Kolkata',
   });
   const timeFormatted = now.toLocaleTimeString('en-IN', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
+    timeZone: 'Asia/Kolkata',
   }) + ' IST';
   const fullTimestamp = `${dateFormatted} | ${timeFormatted}`;
 

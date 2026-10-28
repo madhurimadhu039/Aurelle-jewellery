@@ -4,14 +4,14 @@ export const INITIAL_RATES: MetalRateData = {
   gold22k: 13135,
   gold24k: 14329,
   silver1g: 164,
-  lastUpdated: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ', Today',
-  isLive: true,
+  lastUpdated: '',
+  isLive: false,
   provider: 'Store Benchmark (Verified 27 Oct 2026)',
   currency: 'INR',
   goldChange24h: 42.0,
   silverChange24h: 1.5,
   city: 'Mumbai / Pan India Standard',
-  rateStatus: 'current',
+  rateStatus: 'delayed',
   unit: '₹ per gram',
 };
 

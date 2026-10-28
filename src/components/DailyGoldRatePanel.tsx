@@ -68,6 +68,42 @@ export const DailyGoldRatePanel: React.FC = () => {
 
   const statusBadge = getStatusBadge();
 
+  // Format the date and time when rates were last successfully updated in Indian Standard Time (IST)
+  const getLastUpdatedTimestamp = (): string | null => {
+    // 1. If we have a verified timestamp in milliseconds from a genuine live fetch
+    if (rates.lastFetchedAt && typeof rates.lastFetchedAt === 'number' && rates.lastFetchedAt > 0) {
+      const d = new Date(rates.lastFetchedAt);
+      const datePart = d.toLocaleDateString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+      const timePart = d.toLocaleTimeString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+      return `${datePart}, ${timePart} IST`;
+    }
+
+    // 2. If an authorized administrator set a manual override
+    if (rates.isManualOverride && rates.overrideAt) {
+      return rates.overrideAt.includes('IST') ? rates.overrideAt : `${rates.overrideAt} IST`;
+    }
+
+    // 3. If rates object contains a confirmed timestamp string containing IST
+    if (rates.lastUpdated && typeof rates.lastUpdated === 'string' && rates.lastUpdated.includes('IST')) {
+      return rates.lastUpdated;
+    }
+
+    // 4. Otherwise, the actual update timestamp is unavailable
+    return null;
+  };
+
+  const lastUpdatedDisplay = getLastUpdatedTimestamp();
+
   return (
     <section className="relative w-full bg-gradient-to-b from-[#090806] via-[#100D09] to-[#090806] py-10 sm:py-14 border-y border-[#262018] text-[#F7F1E7] overflow-hidden">
       {/* Subtle luxury background radial glow */}
@@ -103,17 +139,24 @@ export const DailyGoldRatePanel: React.FC = () => {
               <span>{statusBadge.label}</span>
             </div>
 
-            {/* Date & Refresh */}
+            {/* Last Updated Timestamp & Refresh */}
             <div className="flex items-center gap-2 text-xs text-[#BFB5A7] bg-[#16120C] border border-[#2B2319] px-3.5 py-1.5 rounded-full">
-              <Clock className="w-3.5 h-3.5 text-[#D8B47A]" />
-              <span className="font-medium text-white">{rates.dateFormatted || 'Today'}</span>
-              <span className="text-[#594E3F]">|</span>
-              <span className="text-[#A69C8E] text-[11px]">{rates.timeFormatted || rates.lastUpdated}</span>
+              <Clock className="w-3.5 h-3.5 text-[#D8B47A] flex-shrink-0" />
+              {lastUpdatedDisplay ? (
+                <div className="flex items-center gap-1.5 text-[11px] sm:text-xs">
+                  <span className="text-[#8C8375]">Last updated:</span>
+                  <span className="font-medium text-white">{lastUpdatedDisplay}</span>
+                </div>
+              ) : (
+                <span className="text-[11px] sm:text-xs text-[#8C8375]">
+                  Last updated: <span className="text-amber-400 font-medium">Unavailable.</span>
+                </span>
+              )}
 
               <button
                 onClick={() => refreshRates()}
                 disabled={isRefreshingRates}
-                className="ml-1 p-1 text-gray-400 hover:text-[#D8B47A] transition-colors disabled:opacity-50"
+                className="ml-1 p-1 text-gray-400 hover:text-[#D8B47A] transition-colors disabled:opacity-50 flex-shrink-0"
                 title="Refresh latest bullion feed"
                 aria-label="Refresh latest bullion rates"
               >

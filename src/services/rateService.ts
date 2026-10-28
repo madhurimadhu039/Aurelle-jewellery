@@ -37,11 +37,13 @@ function formatDate(date: Date): { dateStr: string; timeStr: string; fullStr: st
     day: 'numeric',
     month: 'long',
     year: 'numeric',
+    timeZone: 'Asia/Kolkata',
   });
   const timeStr = date.toLocaleTimeString('en-IN', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
+    timeZone: 'Asia/Kolkata',
   }) + ' IST';
   const fullStr = `${dateStr} | ${timeStr}`;
   return { dateStr, timeStr, fullStr };
@@ -86,16 +88,11 @@ export const rateService = {
         console.error('Error parsing stored rates', e);
       }
     }
-    const { dateStr, timeStr, fullStr } = formatDate(new Date());
     const initial: MetalRateData = {
       ...INITIAL_RATES,
-      dateFormatted: dateStr,
-      timeFormatted: timeStr,
-      lastUpdated: fullStr,
-      rateStatus: 'current',
+      rateStatus: 'delayed',
       unit: '₹ per gram',
       isManualOverride: false,
-      lastFetchedAt: Date.now(),
     };
     return initial;
   },

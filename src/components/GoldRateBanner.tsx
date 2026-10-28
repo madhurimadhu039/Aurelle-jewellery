@@ -7,6 +7,35 @@ export const GoldRateBanner: React.FC = () => {
   const { rates, refreshRates, isRefreshingRates, formatINR } = useApp();
   const [calculatorOpen, setCalculatorOpen] = useState(false);
 
+  // Format the actual last successfully updated timestamp in Indian Standard Time (IST)
+  const getLastUpdatedTimestamp = (): string | null => {
+    if (rates.lastFetchedAt && typeof rates.lastFetchedAt === 'number' && rates.lastFetchedAt > 0) {
+      const d = new Date(rates.lastFetchedAt);
+      const datePart = d.toLocaleDateString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+      const timePart = d.toLocaleTimeString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+      return `${datePart}, ${timePart} IST`;
+    }
+    if (rates.isManualOverride && rates.overrideAt) {
+      return rates.overrideAt.includes('IST') ? rates.overrideAt : `${rates.overrideAt} IST`;
+    }
+    if (rates.lastUpdated && typeof rates.lastUpdated === 'string' && rates.lastUpdated.includes('IST')) {
+      return rates.lastUpdated;
+    }
+    return null;
+  };
+
+  const lastUpdatedDisplay = getLastUpdatedTimestamp();
+
   return (
     <div className="w-full bg-[#090806] border-y border-[#262018] text-[#D1C7BA]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 sm:py-4">
@@ -87,7 +116,7 @@ export const GoldRateBanner: React.FC = () => {
                 {rates.isLive ? '● Live Bullion Market' : 'Official Guild Benchmark'}
               </span>
               <span className="text-[10px] text-[#8C8375]">
-                {rates.lastUpdated || 'Updated Today, 4:30 PM'}
+                {lastUpdatedDisplay ? `Last updated: ${lastUpdatedDisplay}` : 'Last updated: Unavailable.'}
               </span>
             </div>
 
