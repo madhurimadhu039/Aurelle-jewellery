@@ -3,6 +3,7 @@ import { Product, CartItem, MetalRateData, UserProfile } from '../types';
 import { rateService } from '../services/rateService';
 import { authService } from '../services/authService';
 import { productService } from '../services/productService';
+import { AuthRequiredModal } from '../components/AuthRequiredModal';
 
 interface Toast {
   id: string;
@@ -107,9 +108,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Products state (subscribes to real-time changes)
   const [products, setProducts] = useState<Product[]>(() => productService.getAll(false));
 
-  // User & Auth state
-  const [user, setUser] = useState<UserProfile | null>(() => authService.getCurrentUser() || GUEST_PATRON);
+  // User & Auth state (unauthenticated guests start as null until login / register)
+  const [user, setUser] = useState<UserProfile | null>(() => authService.getCurrentUser());
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+
+  // Authentication prompt modal state for unauthenticated cart/wishlist attempts
+  const [authModal, setAuthModal] = useState<{
+    isOpen: boolean;
+    action: 'cart' | 'wishlist';
+    productName?: string;
+  }>({
+    isOpen: false,
+    action: 'cart',
+  });
 
   // Toasts
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -117,7 +128,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Sync auth state on mount and subscribe to changes
   useEffect(() => {
     const unsubscribeAuth = authService.subscribeToAuth((activeUser, adminFlag) => {
-      setUser(activeUser || GUEST_PATRON);
+      setUser(activeUser);
       setIsAdmin(adminFlag);
     });
 
@@ -170,6 +181,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const addToCart = (product: Product, quantity = 1, selectedSize?: string) => {
+    // Authentication check: users must be signed in/registered to add to cart
+    const isAuthenticated = Boolean(user && user.uid && user.uid !== 'patron-guest-demo');
+    if (!isAuthenticated) {
+      setAuthModal({
+        isOpen: true,
+        action: 'cart',
+        productName: product.name,
+      });
+      showToast('Please sign in or register to add items to your cart', 'info');
+      return;
+    }
+
     setCart((prev) => {
       const existing = prev.find((item) => item.product.id === product.id);
       if (existing) {
@@ -205,6 +228,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const cartSubtotal = cart.reduce((total, item) => total + item.product.price * item.quantity, 0);
 
   const toggleWishlist = (product: Product) => {
+    // Authentication check: users must be signed in/registered to save to wishlist/favorites
+    const isAuthenticated = Boolean(user && user.uid && user.uid !== 'patron-guest-demo');
+    if (!isAuthenticated) {
+      setAuthModal({
+        isOpen: true,
+        action: 'wishlist',
+        productName: product.name,
+      });
+      showToast('Please sign in or register to save items to your wishlist', 'info');
+      return;
+    }
+
     setWishlist((prev) => {
       const exists = prev.some((p) => p.id === product.id);
       if (exists) {
@@ -368,6 +403,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           </div>
         ))}
       </div>
+
+      {/* Authentication Required Modal for Unauthenticated Cart / Wishlist Actions */}
+      <AuthRequiredModal
+        isOpen={authModal.isOpen}
+        onClose={() => setAuthModal((prev) => ({ ...prev, isOpen: false }))}
+        action={authModal.action}
+        productName={authModal.productName}
+      />
     </AppContext.Provider>
   );
 };

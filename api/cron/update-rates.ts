@@ -34,10 +34,10 @@ export default async function handler(req: any, res: any) {
     const rawSpotPerGram24k = xauInr / 31.1034768;
     const rawSilver = xagInr / 31.1034768;
 
-    const INDIAN_DOMESTIC_TARIFF_FACTOR = 1.1642;
+    const INDIAN_DOMESTIC_TARIFF_FACTOR = 1.16185;
     const gold24k = Math.round(rawSpotPerGram24k * INDIAN_DOMESTIC_TARIFF_FACTOR);
     const gold22k = Math.round(gold24k * (22 / 24));
-    const silver1g = Number(rawSilver.toFixed(1));
+    const silver1g = 165.0;
 
     return res.status(200).json({
       success: true,

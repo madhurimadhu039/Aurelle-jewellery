@@ -109,7 +109,7 @@ export const HomePage: React.FC = () => {
       description: 'Centuries of royal temple craftsmanship and bridal ensembles for your most sacred day.',
       cta: 'EXPLORE BRIDAL',
       link: '/shop?category=Bridal%20Jewellery',
-      image: '/images/scheme-model.jpg',
+      image: 'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?auto=format&fit=crop&w=1600&q=85',
     },
   ];
 
@@ -162,7 +162,7 @@ export const HomePage: React.FC = () => {
     {
       name: 'Bracelets',
       link: '/shop?category=Bracelets',
-      image: '/images/bracelet-1.jpg',
+      image: 'https://images.unsplash.com/photo-1611591475155-c2a92f8809e2?auto=format&fit=crop&w=600&q=80',
     },
     {
       name: 'Bangles',
@@ -536,11 +536,11 @@ export const HomePage: React.FC = () => {
       {/* 5. LUXURY EDITORIAL BANNER — "THE AURELLE EXPERIENCE" */}
       {/* ======================================================== */}
       <section className="relative w-full bg-[#090806] overflow-hidden min-h-[380px] sm:min-h-[460px] flex items-center text-left">
-        {/* Full width background image with diamond ring on satin */}
+        {/* Full width background image with luxury fine jewellery atelier backdrop */}
         <div className="absolute inset-0">
           <img
-            src="/images/editorial-ring.jpg"
-            alt="Solitaire Diamond Ring Editorial"
+            src="https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=1600&q=85"
+            alt="Solitaire Diamond Fine Jewellery Atelier"
             className="w-full h-full object-cover object-right md:object-center transform scale-102"
           />
           {/* Dark gradient from left so text is legible */}
@@ -682,15 +682,10 @@ export const HomePage: React.FC = () => {
                       <div className="relative aspect-square bg-[#0C0A08] overflow-hidden">
                         <Link to={`/product/${prod.id}`} className="block w-full h-full">
                           <img
-                            src={prod.images[0] || (prod.category === 'Bracelets' ? '/images/bracelet-2.jpg' : '/images/editorial-ring.jpg')}
+                            src={prod.images?.[0] || ''}
                             alt={prod.name}
                             onError={(e) => {
-                              const target = e.currentTarget;
-                              if (prod.category === 'Bracelets') {
-                                target.src = '/images/bracelet-2.jpg';
-                              } else {
-                                target.src = '/images/editorial-ring.jpg';
-                              }
+                              e.currentTarget.style.display = 'none';
                             }}
                             className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-108"
                           />

@@ -32,7 +32,7 @@ export const AccountPage: React.FC = () => {
   const { user, isAdmin, loginCustomer, registerCustomer, logout, updateUser, formatINR, showToast } = useApp();
 
   // Auth form states for unauthenticated visitors
-  const [authTab, setAuthTab] = useState<'signin' | 'register' | 'forgot'>('signin');
+  const [authTab, setAuthTab] = useState<'signin' | 'register'>('signin');
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -46,9 +46,6 @@ export const AccountPage: React.FC = () => {
   const [regPhone, setRegPhone] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
-
-  // Password reset field
-  const [resetEmail, setResetEmail] = useState('');
 
   // Account views when signed in
   const [activeAccountTab, setActiveAccountTab] = useState<'overview' | 'orders' | 'profile'>('overview');
@@ -122,22 +119,7 @@ export const AccountPage: React.FC = () => {
     }
   };
 
-  // Handle Password Reset Request
-  const handlePasswordReset = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoadingAuth(true);
-    setAuthError(null);
-    setAuthSuccess(null);
-    try {
-      const msg = await authService.sendPasswordReset(resetEmail.trim());
-      setAuthSuccess(msg);
-      showToast(msg, 'success');
-    } catch (err: any) {
-      setAuthError(err.message || 'Could not send reset instructions');
-    } finally {
-      setLoadingAuth(false);
-    }
-  };
+
 
   // Handle Profile Update
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -177,47 +159,49 @@ export const AccountPage: React.FC = () => {
           /* ========================================================= */
           /* UNAUTHENTICATED PATRON LOGIN & REGISTRATION PORTAL */
           /* ========================================================= */
-          <div className="max-w-md mx-auto bg-[#120F0B] border border-[#2B2319] rounded-2xl p-6 sm:p-8 shadow-2xl">
-            {/* Wordmark */}
-            <div className="text-center mb-6">
-              <span className="font-serif-luxury text-2xl tracking-[0.25em] text-[#F7F1E7] block leading-tight">
+          <div className="max-w-md mx-auto">
+            {/* Direct Return to Store link since Navbar is hidden on signup page */}
+            <div className="mb-4 flex items-center justify-between text-xs">
+              <Link to="/" className="text-[#D8B47A] hover:underline flex items-center gap-1.5 font-medium">
+                ← Return to Aurelle Boutique
+              </Link>
+              <span className="text-[11px] text-gray-500 font-serif-luxury tracking-widest">
                 AURELLE
-              </span>
-              <span className="text-[9px] uppercase tracking-[0.35em] text-[#D8B47A] block font-medium mt-1">
-                PATRON PORTAL & IDENTITY
               </span>
             </div>
 
-            {/* Auth Tab Switcher */}
-            <div className="flex border-b border-[#241F18] mb-6">
-              <button
-                type="button"
-                onClick={() => { setAuthTab('signin'); setAuthError(null); setAuthSuccess(null); }}
-                className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider text-center border-b-2 transition-colors ${
-                  authTab === 'signin' ? 'border-[#D8B47A] text-[#D8B47A]' : 'border-transparent text-gray-400 hover:text-white'
-                }`}
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                onClick={() => { setAuthTab('register'); setAuthError(null); setAuthSuccess(null); }}
-                className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider text-center border-b-2 transition-colors ${
-                  authTab === 'register' ? 'border-[#D8B47A] text-[#D8B47A]' : 'border-transparent text-gray-400 hover:text-white'
-                }`}
-              >
-                Register
-              </button>
-              <button
-                type="button"
-                onClick={() => { setAuthTab('forgot'); setAuthError(null); setAuthSuccess(null); }}
-                className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider text-center border-b-2 transition-colors ${
-                  authTab === 'forgot' ? 'border-[#D8B47A] text-[#D8B47A]' : 'border-transparent text-gray-400 hover:text-white'
-                }`}
-              >
-                Reset
-              </button>
-            </div>
+            <div className="bg-[#120F0B] border border-[#2B2319] rounded-2xl p-6 sm:p-8 shadow-2xl">
+              {/* Wordmark */}
+              <div className="text-center mb-6">
+                <span className="font-serif-luxury text-2xl tracking-[0.25em] text-[#F7F1E7] block leading-tight">
+                  AURELLE
+                </span>
+                <span className="text-[9px] uppercase tracking-[0.35em] text-[#D8B47A] block font-medium mt-1">
+                  PATRON PORTAL & IDENTITY
+                </span>
+              </div>
+
+              {/* Auth Tab Switcher (Sign In & Register only — Reset removed) */}
+              <div className="flex border-b border-[#241F18] mb-6">
+                <button
+                  type="button"
+                  onClick={() => { setAuthTab('signin'); setAuthError(null); setAuthSuccess(null); }}
+                  className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider text-center border-b-2 transition-colors ${
+                    authTab === 'signin' ? 'border-[#D8B47A] text-[#D8B47A]' : 'border-transparent text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Sign In
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setAuthTab('register'); setAuthError(null); setAuthSuccess(null); }}
+                  className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider text-center border-b-2 transition-colors ${
+                    authTab === 'register' ? 'border-[#D8B47A] text-[#D8B47A]' : 'border-transparent text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Register
+                </button>
+              </div>
 
             {/* Feedback Notifications */}
             {authError && (
@@ -271,13 +255,6 @@ export const AccountPage: React.FC = () => {
 
                 <div className="flex justify-between items-center text-[11px] pt-1">
                   <span className="text-gray-400">Encrypted Firebase Auth</span>
-                  <button
-                    type="button"
-                    onClick={() => setAuthTab('forgot')}
-                    className="text-[#D8B47A] hover:underline"
-                  >
-                    Forgot password?
-                  </button>
                 </div>
 
                 <button
@@ -376,45 +353,7 @@ export const AccountPage: React.FC = () => {
                 </button>
               </form>
             )}
-
-            {/* Tab 3: Password Reset */}
-            {authTab === 'forgot' && (
-              <form onSubmit={handlePasswordReset} className="space-y-4 text-xs">
-                <p className="text-gray-400 text-xs">
-                  Enter your registered patron email address. We will generate secure password reset instructions.
-                </p>
-
-                <div>
-                  <label className="text-gray-300 block mb-1 font-medium">Registered Email</label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="patron@example.com"
-                    value={resetEmail}
-                    onChange={(e) => setResetEmail(e.target.value)}
-                    className="w-full bg-[#18140F] border border-[#2B2319] focus:border-[#D8B47A] rounded-xl px-3.5 py-2.5 text-white focus:outline-none"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loadingAuth}
-                  className="w-full py-3 rounded-xl bg-[#D8B47A] hover:bg-[#EBD5A8] text-[#090806] font-bold uppercase tracking-wider text-xs transition-colors shadow-lg disabled:opacity-50"
-                >
-                  {loadingAuth ? 'Sending Instructions...' : 'Send Reset Instructions'}
-                </button>
-
-                <div className="text-center pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setAuthTab('signin')}
-                    className="text-[#D8B47A] hover:underline text-[11px]"
-                  >
-                    ← Back to Sign In
-                  </button>
-                </div>
-              </form>
-            )}
+            </div>
           </div>
         ) : (
           /* ========================================================= */

@@ -73,7 +73,7 @@ export const CartPage: React.FC = () => {
         sku: c.product.sku,
         price: c.product.price,
         quantity: c.quantity,
-        image: c.product.images[0] || '/images/hero-model.jpg',
+        image: c.product.images?.[0] || '',
         purity: c.product.purity,
       })),
       subtotal: validatedSubtotal,
@@ -215,10 +215,7 @@ export const CartPage: React.FC = () => {
                   src={item.product.images[0]}
                   alt={item.product.name}
                   onError={(e) => {
-                    const target = e.currentTarget;
-                    if (item.product.category === 'Bracelets') {
-                      target.src = '/images/bracelet-1.jpg';
-                    }
+                    e.currentTarget.style.display = 'none';
                   }}
                   className="w-24 h-24 rounded-lg object-cover bg-black flex-shrink-0"
                 />

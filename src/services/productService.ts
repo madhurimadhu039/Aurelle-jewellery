@@ -74,22 +74,6 @@ export const productService = {
     // Ensure product images are distinct and not colliding with collection images
     products = products.map((p) => {
       const isPublished = p.isPublished !== false; // Default true
-
-      // Auto-heal bracelet images to distinct project assets
-      if (p.id === 'aur-004' || p.category === 'Bracelets') {
-        const hasOldOrBroken = !p.images || !p.images.length || 
-          p.images.some((img) => img.includes('photo-1611591475155')) ||
-          p.images[0] === '/images/bracelet-1.jpg';
-        if (hasOldOrBroken) {
-          hasUpdatedImages = true;
-          return {
-            ...p,
-            isPublished,
-            images: ['/images/bracelet-2.jpg', '/images/bracelet-1.jpg'],
-          };
-        }
-      }
-
       return { ...p, isPublished };
     });
 

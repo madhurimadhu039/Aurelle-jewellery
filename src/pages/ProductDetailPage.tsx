@@ -88,15 +88,10 @@ export const ProductDetailPage: React.FC = () => {
           <div className="space-y-4">
             <div className="relative aspect-square rounded-2xl overflow-hidden bg-[#12100C] border border-[#2B2319] group">
               <img
-                src={product.images[selectedImageIndex] || product.images[0] || (product.category === 'Bracelets' ? '/images/bracelet-2.jpg' : '/images/editorial-ring.jpg')}
+                src={product.images[selectedImageIndex] || product.images[0] || ''}
                 alt={product.name}
                 onError={(e) => {
-                  const target = e.currentTarget;
-                  if (product.category === 'Bracelets') {
-                    target.src = '/images/bracelet-2.jpg';
-                  } else {
-                    target.src = '/images/editorial-ring.jpg';
-                  }
+                  e.currentTarget.style.display = 'none';
                 }}
                 className="w-full h-full object-cover object-center transform transition-transform duration-700 ease-out group-hover:scale-115 cursor-crosshair"
               />
@@ -138,10 +133,7 @@ export const ProductDetailPage: React.FC = () => {
                       src={img}
                       alt={`${product.name} angle ${idx + 1}`}
                       onError={(e) => {
-                        const target = e.currentTarget;
-                        if (product.category === 'Bracelets') {
-                          target.src = idx === 0 ? '/images/bracelet-1.jpg' : '/images/bracelet-2.jpg';
-                        }
+                        e.currentTarget.style.display = 'none';
                       }}
                       className="w-full h-full object-cover"
                     />

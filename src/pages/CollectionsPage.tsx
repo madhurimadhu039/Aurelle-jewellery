@@ -66,7 +66,7 @@ export const CollectionsPage: React.FC = () => {
       tagline: 'Articulated Fluid Luxury',
       description: 'Seamless diamond lines and articulated 18K gold links featuring invisible double-lock security clasps for daily cocktail glamour.',
       itemCount: '16 Designs',
-      image: '/images/bracelet-1.jpg',
+      image: 'https://images.unsplash.com/photo-1611591475155-c2a92f8809e2?auto=format&fit=crop&w=800&q=80',
       highlight: 'Seamless Articulation',
     },
     {

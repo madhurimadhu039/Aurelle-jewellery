@@ -262,10 +262,7 @@ export const ForeverPieceWizard: React.FC = () => {
                         src={prod.images[0]}
                         alt={prod.name}
                         onError={(e) => {
-                          const target = e.currentTarget;
-                          if (prod.category === 'Bracelets') {
-                            target.src = '/images/bracelet-1.jpg';
-                          }
+                          e.currentTarget.style.display = 'none';
                         }}
                         className="w-full h-full object-cover"
                       />

@@ -826,7 +826,7 @@ export const AdminPage: React.FC = () => {
                       <tr key={p.id} className="hover:bg-[#16120D] transition-colors">
                         <td className="p-4 flex items-center gap-3">
                           <img 
-                            src={p.images[0] || '/images/bracelet-1.jpg'} 
+                            src={p.images?.[0] || ''} 
                             alt={p.name} 
                             className="w-10 h-10 rounded-lg object-cover bg-black border border-[#2A231A]" 
                           />

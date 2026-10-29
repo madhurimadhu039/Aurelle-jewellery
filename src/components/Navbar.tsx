@@ -123,24 +123,42 @@ export const Navbar: React.FC = () => {
                     onClick={() => setAccountDropdownOpen(false)}
                   >
                     <div className="px-4 py-2.5 border-b border-[#241F18]">
-                      <p className="font-semibold text-white">{user?.name || 'Patron'}</p>
-                      <p className="text-[11px] text-gray-400 truncate">{user?.email || 'patron@aurelle.com'}</p>
-                      <span className={`inline-block mt-1 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
-                        isAdmin 
-                          ? 'bg-[#D8B47A]/20 text-[#D8B47A] border border-[#D8B47A]/40' 
-                          : 'bg-gray-800 text-gray-300'
-                      }`}>
-                        {isAdmin ? 'Guild Administrator' : 'Registered Patron'}
-                      </span>
+                      {user ? (
+                        <>
+                          <p className="font-semibold text-white">{user.name || 'Patron'}</p>
+                          <p className="text-[11px] text-gray-400 truncate">{user.email}</p>
+                          <span className={`inline-block mt-1 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
+                            isAdmin 
+                              ? 'bg-[#D8B47A]/20 text-[#D8B47A] border border-[#D8B47A]/40' 
+                              : 'bg-gray-800 text-gray-300'
+                          }`}>
+                            {isAdmin ? 'Guild Administrator' : 'Registered Patron'}
+                          </span>
+                        </>
+                      ) : (
+                        <div>
+                          <p className="font-semibold text-white">Welcome, Guest</p>
+                          <Link 
+                            to="/account"
+                            className="inline-block mt-1.5 px-3 py-1 bg-[#D8B47A] text-[#090806] font-bold text-[10px] rounded uppercase tracking-wider hover:bg-[#EBD5A8] transition-colors"
+                          >
+                            Sign In / Register
+                          </Link>
+                        </div>
+                      )}
                     </div>
-                    <Link to="/account" className="block px-4 py-2 hover:bg-[#1A1611] text-white font-medium">My Patron Dashboard</Link>
-                    <Link to="/passport" className="block px-4 py-2 hover:bg-[#1A1611] text-gray-300 hover:text-white">Heirloom Passport™</Link>
-                    <Link to="/schemes" className="block px-4 py-2 hover:bg-[#1A1611] text-gray-300 hover:text-white">Jewellery Schemes</Link>
-                    <Link to="/pay-due" className="block px-4 py-2 hover:bg-[#1A1611] text-gray-300 hover:text-white">Pay Due Invoices</Link>
-                    <Link to="/ledger" className="block px-4 py-2 hover:bg-[#1A1611] text-gray-300 hover:text-white">My Ledger Statement</Link>
-                    <Link to="/add-existing" className="block px-4 py-2 hover:bg-[#1A1611] text-gray-300 hover:text-white">Add Existing Jewellery</Link>
-                    
-                    <div className="border-t border-[#241F18] my-1" />
+                    {user && (
+                      <>
+                        <Link to="/account" className="block px-4 py-2 hover:bg-[#1A1611] text-white font-medium">My Patron Dashboard</Link>
+                        <Link to="/passport" className="block px-4 py-2 hover:bg-[#1A1611] text-gray-300 hover:text-white">Heirloom Passport™</Link>
+                        <Link to="/schemes" className="block px-4 py-2 hover:bg-[#1A1611] text-gray-300 hover:text-white">Jewellery Schemes</Link>
+                        <Link to="/pay-due" className="block px-4 py-2 hover:bg-[#1A1611] text-gray-300 hover:text-white">Pay Due Invoices</Link>
+                        <Link to="/ledger" className="block px-4 py-2 hover:bg-[#1A1611] text-gray-300 hover:text-white">My Ledger Statement</Link>
+                        <Link to="/add-existing" className="block px-4 py-2 hover:bg-[#1A1611] text-gray-300 hover:text-white">Add Existing Jewellery</Link>
+                        
+                        <div className="border-t border-[#241F18] my-1" />
+                      </>
+                    )}
                     
                     <Link 
                       to="/admin" 
@@ -153,12 +171,12 @@ export const Navbar: React.FC = () => {
                       {isAdmin ? '✦ Admin Control Center' : 'Guild Admin Access'}
                     </Link>
 
-                    {isAdmin && (
+                    {user && (
                       <button
                         onClick={() => logout()}
                         className="w-full text-left px-4 py-2 text-rose-400 hover:bg-[#1A1611] text-xs font-medium"
                       >
-                        Sign Out of Admin Suite
+                        Sign Out
                       </button>
                     )}
                   </div>

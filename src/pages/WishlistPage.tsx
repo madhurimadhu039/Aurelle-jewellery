@@ -59,10 +59,7 @@ export const WishlistPage: React.FC = () => {
                     src={product.images[0]}
                     alt={product.name}
                     onError={(e) => {
-                      const target = e.currentTarget;
-                      if (product.category === 'Bracelets') {
-                        target.src = '/images/bracelet-1.jpg';
-                      }
+                      e.currentTarget.style.display = 'none';
                     }}
                     className="w-full h-full object-cover"
                   />
