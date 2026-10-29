@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   ShieldAlert, 
   Package, 
@@ -45,6 +46,7 @@ export const AdminPage: React.FC = () => {
     formatINR, 
     showToast 
   } = useApp();
+  const navigate = useNavigate();
 
   // Admin login form states (shown when unauthenticated)
   const [adminEmail, setAdminEmail] = useState('');
@@ -559,12 +561,36 @@ export const AdminPage: React.FC = () => {
   // If user is NOT an authorized administrator, render ONLY the secure sign-in portal.
   // =========================================================
   if (!isAdmin) {
+    const handleClose = () => {
+      if (window.history.length > 2) {
+        navigate(-1);
+      } else {
+        navigate('/');
+      }
+    };
+
     return (
-      <div className="min-h-screen bg-[#090806] text-white flex flex-col items-center justify-center p-6 text-center">
-        <div className="max-w-md w-full bg-[#120F0B] border border-[#D8B47A]/40 rounded-3xl p-8 sm:p-10 shadow-2xl relative text-left">
+      <div 
+        className="min-h-screen bg-[#090806] text-white flex flex-col items-center justify-center p-4 sm:p-6 text-center"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) handleClose();
+        }}
+      >
+        <div className="max-w-md w-full bg-[#120F0B] border border-[#D8B47A]/40 rounded-3xl p-8 sm:p-10 shadow-2xl relative text-left animate-in fade-in zoom-in-95 duration-150">
           
+          {/* Top-Right Close Button ("*" / "✕" mark) */}
+          <button
+            type="button"
+            onClick={handleClose}
+            className="absolute top-5 right-5 sm:top-6 sm:right-6 w-9 h-9 rounded-xl flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#1E1912] border border-transparent hover:border-[#2C2720] transition-all cursor-pointer z-10"
+            aria-label="Close Admin Control Center"
+            title="Close"
+          >
+            <X className="w-5 h-5 stroke-[1.8]" />
+          </button>
+
           {/* Guild Emblem & Title */}
-          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-[#241F18]">
+          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-[#241F18] pr-10">
             <div className="w-12 h-12 rounded-2xl bg-[#1C1710] border border-[#D8B47A]/50 flex items-center justify-center text-[#D8B47A]">
               <Lock className="w-6 h-6 stroke-[1.5]" />
             </div>
