@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { X, Heart, ShoppingBag } from 'lucide-react';
 
 interface Props {
@@ -15,8 +14,6 @@ export const AuthRequiredModal: React.FC<Props> = ({
   action,
   productName,
 }) => {
-  const navigate = useNavigate();
-
   useEffect(() => {
     if (!isOpen) return;
     const originalOverflow = document.body.style.overflow;
@@ -37,7 +34,7 @@ export const AuthRequiredModal: React.FC<Props> = ({
 
   const handleGoToAuth = () => {
     onClose();
-    navigate('/account');
+    window.location.href = '/account';
   };
 
   return (
@@ -108,3 +105,4 @@ export const AuthRequiredModal: React.FC<Props> = ({
     </div>
   );
 };
+

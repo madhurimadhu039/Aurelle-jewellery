@@ -71,12 +71,12 @@ const AppLayout: React.FC = () => {
 
 export const App: React.FC = () => {
   return (
-    <AppProvider>
-      <Router>
+    <Router>
+      <AppProvider>
         <ScrollToTop />
         <AppLayout />
-      </Router>
-    </AppProvider>
+      </AppProvider>
+    </Router>
   );
 };
 
