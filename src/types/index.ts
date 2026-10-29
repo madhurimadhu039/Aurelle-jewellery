@@ -87,6 +87,19 @@ export interface Scheme {
   minAmount: number;
 }
 
+export interface SchemePaymentReceipt {
+  installmentNo: number;
+  amount: number;
+  paidDate: string;
+  receiptNo: string;
+  mode: string;
+  transactionRef?: string;
+  status?: 'SUCCESS' | 'PENDING' | 'FAILED' | 'CANCELLED';
+  verifiedAt?: string;
+  verifiedBy?: string;
+  notes?: string;
+}
+
 export interface SchemeEnrollment {
   id: string;
   schemeId: string;
@@ -94,6 +107,7 @@ export interface SchemeEnrollment {
   customerName: string;
   customerEmail: string;
   customerPhone: string;
+  customerUid?: string;
   monthlyAmount: number;
   tenureMonths: number;
   installmentsPaid: number;
@@ -101,13 +115,8 @@ export interface SchemeEnrollment {
   nextDueDate: string;
   maturityDate: string;
   status: 'ACTIVE' | 'COMPLETED' | 'DEFAULTED';
-  paymentsHistory: {
-    installmentNo: number;
-    amount: number;
-    paidDate: string;
-    receiptNo: string;
-    mode: string;
-  }[];
+  isSampleData?: boolean;
+  paymentsHistory: SchemePaymentReceipt[];
 }
 
 export interface PayDueRecord {

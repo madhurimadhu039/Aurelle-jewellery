@@ -60,6 +60,14 @@ export const ledgerService = {
   addEntry(entry: Omit<LedgerEntry, 'id' | 'balance'> & { balance?: number }): LedgerEntry {
     const entries = ledgerService.getEntries();
     
+    // Prevent duplicate ledger entry by refNumber
+    if (entry.refNumber) {
+      const existing = entries.find((e) => e.refNumber === entry.refNumber);
+      if (existing) {
+        return existing;
+      }
+    }
+
     // Calculate running balance
     const lastBalance = entries.length > 0 ? entries[0].balance : 0;
     const computedBalance = entry.balance ?? (lastBalance + (entry.debit || 0) - (entry.credit || 0));

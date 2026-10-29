@@ -461,9 +461,9 @@ export const AdminPage: React.FC = () => {
     }
   };
 
-  const handleAdminRecordSchemePayment = (enrollmentId: string) => {
+  const handleAdminRecordSchemePayment = async (enrollmentId: string) => {
     try {
-      const updated = schemeService.payInstallment(enrollmentId, 'In-Boutique Certified Remittance');
+      const updated = await schemeService.payInstallment(enrollmentId, 'In-Boutique Certified Remittance');
       setEnrollments([...schemeService.getEnrollments()]);
       setLedgerEntries(ledgerService.getEntries());
       showToast(`Installment #${updated.installmentsPaid} recorded for ${updated.customerName}`, 'success');
