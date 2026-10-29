@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { ProductCard } from '../components/ProductCard';
 import { VirtualTryOnModal } from '../components/VirtualTryOnModal';
+import { ProductQuickViewModal } from '../components/ProductQuickViewModal';
 import { MainCategoryNav, MainCategoryKey } from '../components/MainCategoryNav';
 import { productService } from '../services/productService';
 import { Product, Category } from '../types';
@@ -34,6 +35,24 @@ export const ShopPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<'featured' | 'price-asc' | 'price-desc' | 'rating' | 'newest'>('featured');
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [tryOnProduct, setTryOnProduct] = useState<Product | null>(null);
+  const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
+
+  // Lock body scroll and handle Escape key for mobile filter drawer
+  useEffect(() => {
+    if (!mobileFilterOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileFilterOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [mobileFilterOpen]);
 
   // Sync state if URL search parameters change
   useEffect(() => {
@@ -538,6 +557,7 @@ export const ShopPage: React.FC = () => {
                     key={product.id}
                     product={product}
                     onTryOn={(p) => setTryOnProduct(p)}
+                    onQuickView={(p) => setQuickViewProduct(p)}
                   />
                 ))}
               </div>
@@ -551,8 +571,18 @@ export const ShopPage: React.FC = () => {
 
       {/* Mobile Filters Drawer */}
       {mobileFilterOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm lg:hidden flex justify-end">
-          <div className="bg-[#120F0B] w-4/5 max-w-sm h-full p-6 overflow-y-auto flex flex-col justify-between text-left">
+        <div 
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm lg:hidden flex justify-end animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setMobileFilterOpen(false);
+          }}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div 
+            className="bg-[#120F0B] w-full max-w-xs sm:max-w-sm h-full p-4 sm:p-6 overflow-y-auto overscroll-contain flex flex-col justify-between text-left"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div>
               <div className="flex justify-between items-center pb-4 border-b border-[#241F18] mb-6">
                 <h3 className="text-xs uppercase font-bold tracking-wider text-white">Filter Jewellery</h3>
@@ -690,6 +720,18 @@ export const ShopPage: React.FC = () => {
         <VirtualTryOnModal
           product={tryOnProduct}
           onClose={() => setTryOnProduct(null)}
+        />
+      )}
+
+      {/* Product Quick View Modal */}
+      {quickViewProduct && (
+        <ProductQuickViewModal
+          product={quickViewProduct}
+          onClose={() => setQuickViewProduct(null)}
+          onTryOn={(p) => {
+            setQuickViewProduct(null);
+            setTryOnProduct(p);
+          }}
         />
       )}
 

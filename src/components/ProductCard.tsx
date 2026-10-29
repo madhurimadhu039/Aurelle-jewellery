@@ -59,9 +59,22 @@ export const ProductCard: React.FC<Props> = ({ product, onQuickView, onTryOn }) 
                 : 'bg-[#090806]/80 text-[#D1C7BA] hover:text-[#D8B47A] hover:bg-[#181510] border border-[#2C2720]'
             }`}
             title={isWishlisted ? 'Remove from wishlist' : 'Save to wishlist'}
+            aria-label="Wishlist"
           >
             <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-current' : ''}`} />
           </button>
+
+          {/* Quick View Button */}
+          {onQuickView && (
+            <button
+              onClick={() => onQuickView(product)}
+              className="w-8 h-8 rounded-full flex items-center justify-center bg-[#090806]/80 text-[#D1C7BA] hover:text-[#D8B47A] hover:bg-[#181510] border border-[#2C2720] transition-all"
+              title="Quick view product details"
+              aria-label="Quick view"
+            >
+              <Eye className="w-4 h-4" />
+            </button>
+          )}
 
           {/* Compare Button */}
           <button
@@ -72,6 +85,7 @@ export const ProductCard: React.FC<Props> = ({ product, onQuickView, onTryOn }) 
                 : 'bg-[#090806]/80 text-[#D1C7BA] hover:text-[#D8B47A] hover:bg-[#181510] border border-[#2C2720]'
             }`}
             title={isCompared ? 'Remove from compare' : 'Add to compare'}
+            aria-label="Compare"
           >
             <Scale className="w-4 h-4" />
           </button>

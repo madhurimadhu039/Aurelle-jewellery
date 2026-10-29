@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Trash2, ShoppingBag, ShieldCheck, ArrowRight, CheckCircle2, Sparkles } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -38,6 +38,25 @@ export const CartPage: React.FC = () => {
       alert('Invalid coupon code. Try "AURELLE10" for 10% privilege discount.');
     }
   };
+
+  // Lock background body scroll and listen for Escape when Checkout modal is open
+  useEffect(() => {
+    if (!checkoutModalOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    const originalPaddingRight = document.body.style.paddingRight;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setCheckoutModalOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = originalOverflow;
+      document.body.style.paddingRight = originalPaddingRight;
+    };
+  }, [checkoutModalOpen]);
 
   // Re-verify prices and stock against active product catalogue
   let validatedSubtotal = 0;
@@ -344,113 +363,113 @@ export const CartPage: React.FC = () => {
       {/* Checkout Modal */}
       {checkoutModalOpen && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md overflow-y-auto overscroll-contain animate-in fade-in duration-200"
           onClick={(e) => {
             if (e.target === e.currentTarget) setCheckoutModalOpen(false);
           }}
           role="dialog"
           aria-modal="true"
         >
-          <div className="bg-[#120F0B] border border-[#D8B47A]/40 rounded-2xl max-w-xl w-full p-6 text-left max-h-[90vh] overflow-y-auto shadow-2xl">
+          <div className="bg-[#120F0B] border border-[#D8B47A]/40 rounded-2xl max-w-xl w-full p-4 sm:p-6 text-left my-auto max-h-[92vh] overflow-y-auto overscroll-contain shadow-2xl">
             <div className="flex justify-between items-center pb-3 border-b border-[#241F18] mb-4">
-              <h3 className="font-display-luxury text-base font-bold text-white">
-                CONFIRM SHIPPING & ORDER
+              <h3 className="font-display-luxury text-sm sm:text-base font-bold text-white tracking-wide">
+                CONFIRM SHIPPING &amp; ORDER
               </h3>
               <button 
                 type="button"
                 onClick={() => setCheckoutModalOpen(false)} 
                 aria-label="Close dialog"
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-[#D8B47A] hover:bg-[#1E1912] focus:outline-none focus:ring-2 focus:ring-[#D8B47A] text-xl font-light leading-none"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-[#D8B47A] hover:bg-[#1E1912] focus:outline-none focus:ring-2 focus:ring-[#D8B47A] text-2xl font-light leading-none transition-colors"
               >
-                ×
+                &times;
               </button>
             </div>
 
-            <div className="mb-4 p-3 rounded-xl bg-[#D8B47A]/10 border border-[#D8B47A]/30 text-[11px] text-[#D8B47A]">
+            <div className="mb-4 p-3 rounded-xl bg-[#D8B47A]/10 border border-[#D8B47A]/30 text-[11px] text-[#D8B47A] leading-relaxed">
               <strong>Sandbox / Demo Notice:</strong> Payment gateway is in demo mode. Submitting this order will register your request in the vault without live credit card/UPI charges.
             </div>
 
             <form onSubmit={handlePlaceOrder} className="space-y-4 text-xs">
               <div>
-                <label className="text-gray-400 block mb-1">Full Name</label>
+                <label className="text-gray-300 block mb-1 font-medium">Full Name</label>
                 <input
                   type="text"
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full bg-[#18140F] border border-[#2B2319] rounded p-2 text-white"
+                  className="w-full bg-[#18140F] border border-[#2B2319] focus:border-[#D8B47A] rounded-xl p-2.5 text-white focus:outline-none"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-gray-400 block mb-1">Email Address</label>
+                  <label className="text-gray-300 block mb-1 font-medium">Email Address</label>
                   <input
                     type="email"
                     required
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full bg-[#18140F] border border-[#2B2319] rounded p-2 text-white"
+                    className="w-full bg-[#18140F] border border-[#2B2319] focus:border-[#D8B47A] rounded-xl p-2.5 text-white focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="text-gray-400 block mb-1">Mobile Number</label>
+                  <label className="text-gray-300 block mb-1 font-medium">Mobile Number</label>
                   <input
                     type="tel"
                     required
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full bg-[#18140F] border border-[#2B2319] rounded p-2 text-white"
+                    className="w-full bg-[#18140F] border border-[#2B2319] focus:border-[#D8B47A] rounded-xl p-2.5 text-white focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-gray-400 block mb-1">Shipping Street Address</label>
+                <label className="text-gray-300 block mb-1 font-medium">Shipping Street Address</label>
                 <input
                   type="text"
                   required
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full bg-[#18140F] border border-[#2B2319] rounded p-2 text-white"
+                  className="w-full bg-[#18140F] border border-[#2B2319] focus:border-[#D8B47A] rounded-xl p-2.5 text-white focus:outline-none"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-gray-400 block mb-1">City</label>
+                  <label className="text-gray-300 block mb-1 font-medium">City</label>
                   <input
                     type="text"
                     required
                     value={formData.city}
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    className="w-full bg-[#18140F] border border-[#2B2319] rounded p-2 text-white"
+                    className="w-full bg-[#18140F] border border-[#2B2319] focus:border-[#D8B47A] rounded-xl p-2.5 text-white focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="text-gray-400 block mb-1">Pincode</label>
+                  <label className="text-gray-300 block mb-1 font-medium">Pincode</label>
                   <input
                     type="text"
                     required
                     value={formData.pincode}
                     onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
-                    className="w-full bg-[#18140F] border border-[#2B2319] rounded p-2 text-white"
+                    className="w-full bg-[#18140F] border border-[#2B2319] focus:border-[#D8B47A] rounded-xl p-2.5 text-white focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-gray-400 block mb-1.5">Payment Method</label>
-                <div className="grid grid-cols-3 gap-2">
+                <label className="text-gray-300 block mb-1.5 font-medium">Payment Method</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {['UPI', 'Credit/Debit Card', 'Net Banking'].map((mode) => (
                     <button
                       key={mode}
                       type="button"
                       onClick={() => setFormData({ ...formData, paymentMode: mode })}
-                      className={`p-2.5 rounded border text-center font-medium ${
+                      className={`p-2.5 rounded-xl border text-center font-medium transition-all ${
                         formData.paymentMode === mode
-                          ? 'bg-[#D8B47A] text-[#090806] border-[#D8B47A]'
-                          : 'bg-[#18140F] text-gray-300 border-[#2B2319]'
+                          ? 'bg-[#D8B47A] text-[#090806] border-[#D8B47A] font-bold shadow-md'
+                          : 'bg-[#18140F] text-gray-300 border-[#2B2319] hover:border-[#D8B47A]/50'
                       }`}
                     >
                       {mode}
@@ -459,16 +478,16 @@ export const CartPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-[#241F18] flex items-center justify-between">
+              <div className="pt-4 border-t border-[#241F18] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <span className="text-gray-400 block text-[11px]">Payable Amount</span>
-                  <span className="text-base font-extrabold text-[#D8B47A]">{formatINR(finalTotal)}</span>
+                  <span className="text-base sm:text-lg font-extrabold text-[#D8B47A]">{formatINR(finalTotal)}</span>
                 </div>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-lg bg-[#D8B47A] text-[#090806] font-bold uppercase tracking-wider hover:bg-[#EBD5A8]"
+                  className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#D8B47A] text-[#090806] font-bold uppercase tracking-wider hover:bg-[#EBD5A8] transition-colors shadow-lg text-xs"
                 >
-                  Confirm & Place Order
+                  Confirm &amp; Place Order
                 </button>
               </div>
             </form>

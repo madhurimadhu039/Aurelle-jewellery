@@ -16,6 +16,7 @@ import {
 import { GoldRateBanner } from '../components/GoldRateBanner';
 import { DailyGoldRatePanel } from '../components/DailyGoldRatePanel';
 import { VirtualTryOnModal } from '../components/VirtualTryOnModal';
+import { AppointmentModal } from '../components/AppointmentModal';
 import { MainCategoryNav, MainCategoryKey } from '../components/MainCategoryNav';
 import { useApp } from '../contexts/AppContext';
 import { productService } from '../services/productService';
@@ -56,6 +57,7 @@ export const HomePage: React.FC = () => {
 
   // Pay Due & Verified Record Modal State
   const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [appointmentModalOpen, setAppointmentModalOpen] = useState(false);
   const [statusRecord, setStatusRecord] = useState<PayDueRecord | undefined>(undefined);
   const [statusQuery, setStatusQuery] = useState('');
   const [statusSearched, setStatusSearched] = useState(false);
@@ -513,9 +515,10 @@ export const HomePage: React.FC = () => {
             </div>
 
             {/* 5. Book a Consultation */}
-            <Link
-              to="/schemes"
-              className="col-span-2 md:col-span-1 flex items-center gap-2.5 sm:gap-3 group hover:opacity-90 transition-opacity"
+            <button
+              type="button"
+              onClick={() => setAppointmentModalOpen(true)}
+              className="col-span-2 md:col-span-1 flex items-center gap-2.5 sm:gap-3 group hover:opacity-90 transition-opacity text-left cursor-pointer"
             >
               <div className="w-9 h-9 rounded-full border border-[#D8B47A]/40 flex items-center justify-center text-[#D8B47A] flex-shrink-0 group-hover:border-[#D8B47A]">
                 <Calendar className="w-4 h-4 stroke-[1.5]" />
@@ -526,7 +529,7 @@ export const HomePage: React.FC = () => {
                 </h4>
                 <p className="text-[10px] text-[#8C8375] font-light">Personalised service</p>
               </div>
-            </Link>
+            </button>
 
           </div>
         </div>
@@ -833,12 +836,18 @@ export const HomePage: React.FC = () => {
         />
       )}
 
+      {/* Appointment Consultation Modal */}
+      <AppointmentModal
+        isOpen={appointmentModalOpen}
+        onClose={() => setAppointmentModalOpen(false)}
+      />
+
       {/* ======================================================== */}
       {/* Check Status & Verified Record Modal */}
       {/* ======================================================== */}
       {statusModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md transition-opacity"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md overflow-y-auto overscroll-contain animate-in fade-in duration-200"
           onClick={() => {
             if (!isVerifying) setStatusModalOpen(false);
           }}
@@ -847,7 +856,7 @@ export const HomePage: React.FC = () => {
           aria-labelledby="status-modal-title"
         >
           <div
-            className="relative bg-[#110E0B] border border-[#D8B47A]/40 rounded-2xl max-w-xl w-full p-6 sm:p-7 text-left shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
+            className="relative bg-[#110E0B] border border-[#D8B47A]/40 rounded-2xl max-w-xl w-full p-4 sm:p-7 text-left shadow-2xl my-auto max-h-[92vh] overflow-y-auto overscroll-contain"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Top-Right Close Button with proper multiplication sign × */}
@@ -858,7 +867,7 @@ export const HomePage: React.FC = () => {
                 if (!isVerifying) setStatusModalOpen(false);
               }}
               disabled={isVerifying}
-              className="absolute top-4 right-4 w-9 h-9 rounded-full bg-[#1A1510] hover:bg-[#251E17] text-[#D8B47A] hover:text-white border border-[#D8B47A]/30 flex items-center justify-center transition-all disabled:opacity-40 disabled:cursor-not-allowed z-20 group focus:outline-none focus:ring-2 focus:ring-[#D8B47A]/50"
+              className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 w-9 h-9 rounded-full bg-[#1A1510] hover:bg-[#251E17] text-[#D8B47A] hover:text-white border border-[#D8B47A]/30 flex items-center justify-center transition-all disabled:opacity-40 disabled:cursor-not-allowed z-20 group focus:outline-none focus:ring-2 focus:ring-[#D8B47A]/50"
               aria-label="Close popup"
               title="Close (Esc)"
             >
@@ -868,12 +877,12 @@ export const HomePage: React.FC = () => {
             </button>
 
             {/* Modal Header */}
-            <div className="pr-10 mb-5 border-b border-[#241F18] pb-4">
-              <div className="flex items-center gap-2 text-[#D8B47A] text-[11px] font-bold uppercase tracking-wider mb-1">
+            <div className="pr-10 mb-4 sm:mb-5 border-b border-[#241F18] pb-3.5 sm:pb-4">
+              <div className="flex items-center gap-2 text-[#D8B47A] text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mb-1">
                 <ShieldCheck className="w-4 h-4" />
                 <span>Aurelle Ledger & Status Verification</span>
               </div>
-              <h3 id="status-modal-title" className="font-serif-luxury text-xl sm:text-2xl font-medium text-white">
+              <h3 id="status-modal-title" className="font-serif-luxury text-lg sm:text-2xl font-medium text-white break-words">
                 {isVerifiedRecordView ? 'Verified Jewellery Record' : 'Payment & Due Status'}
               </h3>
             </div>

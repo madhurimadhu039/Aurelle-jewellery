@@ -72,6 +72,29 @@ export const SchemePage: React.FC = () => {
     }
   }, [user, isAdmin]);
 
+  // Lock body scroll and handle Escape key for all modals
+  useEffect(() => {
+    const isAnyModalOpen = paymentModalOpen || receiptModalOpen || enrollModalOpen;
+    if (!isAnyModalOpen) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (paymentModalOpen && !isProcessingPayment) setPaymentModalOpen(false);
+        if (receiptModalOpen) setReceiptModalOpen(false);
+        if (enrollModalOpen) setEnrollModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [paymentModalOpen, receiptModalOpen, enrollModalOpen, isProcessingPayment]);
+
   const activeSchemesCount = enrollments.filter((e) => e.status === 'ACTIVE').length;
 
   const totalCustomerContribution = monthlyAmount * (selectedScheme.durationMonths - 1);
@@ -629,7 +652,7 @@ export const SchemePage: React.FC = () => {
       {/* ======================================================== */}
       {paymentModalOpen && activeEnrollmentForPayment && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/90 backdrop-blur-md overflow-y-auto overscroll-contain animate-in fade-in duration-200"
           onClick={(e) => {
             if (e.target === e.currentTarget && !isProcessingPayment) {
               setPaymentModalOpen(false);
@@ -638,7 +661,7 @@ export const SchemePage: React.FC = () => {
           role="dialog"
           aria-modal="true"
         >
-          <div className="bg-[#120F0B] border border-[#D8B47A]/50 rounded-2xl max-w-xl w-full p-6 text-left shadow-2xl max-h-[92vh] overflow-y-auto space-y-5">
+          <div className="bg-[#120F0B] border border-[#D8B47A]/50 rounded-2xl max-w-xl w-full p-4 sm:p-6 text-left shadow-2xl my-auto max-h-[92vh] overflow-y-auto overscroll-contain space-y-4 sm:space-y-5">
             
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-3 border-b border-[#241F18]">
@@ -646,7 +669,7 @@ export const SchemePage: React.FC = () => {
                 <span className="text-[10px] uppercase font-bold text-[#D8B47A] tracking-wider block">
                   AURELLE TREASURY MANDATE
                 </span>
-                <h3 className="font-serif-luxury text-lg font-bold text-white">
+                <h3 className="font-serif-luxury text-base sm:text-lg font-bold text-white">
                   Remit Scheme Installment
                 </h3>
               </div>
@@ -654,6 +677,7 @@ export const SchemePage: React.FC = () => {
                 type="button"
                 onClick={() => setPaymentModalOpen(false)}
                 disabled={isProcessingPayment}
+                aria-label="Close modal"
                 className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#1E1912]"
               >
                 <X className="w-5 h-5" />
@@ -661,14 +685,14 @@ export const SchemePage: React.FC = () => {
             </div>
 
             {/* Scheme & Folio Particulars */}
-            <div className="p-4 rounded-xl bg-[#18140F] border border-[#241F18] space-y-2 text-xs">
+            <div className="p-3.5 sm:p-4 rounded-xl bg-[#18140F] border border-[#241F18] space-y-2 text-xs">
               <div className="flex justify-between">
                 <span className="text-gray-400">Patron:</span>
                 <strong className="text-white">{activeEnrollmentForPayment.customerName}</strong>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Scheme &amp; Folio:</span>
-                <span className="text-gray-200">
+                <span className="text-gray-200 truncate ml-2">
                   {activeEnrollmentForPayment.schemeName} ({activeEnrollmentForPayment.id})
                 </span>
               </div>
@@ -699,12 +723,12 @@ export const SchemePage: React.FC = () => {
               <div className="flex items-start gap-2">
                 <ShieldAlert className="w-4 h-4 text-[#D8B47A] flex-shrink-0 mt-0.5" />
                 <div className="space-y-1">
-                  <strong className="block text-white font-medium">
+                  <strong className="block text-white font-medium text-[11px] sm:text-xs">
                     {gatewayDiagnostic.isConfigured
                       ? 'Production Gateway Active'
                       : 'Payment Gateway Integration Notice'}
                   </strong>
-                  <p className="text-[11px] leading-relaxed text-gray-300">
+                  <p className="text-[10px] sm:text-[11px] leading-relaxed text-gray-300">
                     {gatewayDiagnostic.statusNotice}
                   </p>
                 </div>
@@ -740,12 +764,12 @@ export const SchemePage: React.FC = () => {
             </div>
 
             {/* Beneficiary Details & Reference Input */}
-            <div className="p-4 rounded-xl bg-[#0F0D0A] border border-[#241F18] space-y-3 text-xs">
+            <div className="p-3.5 sm:p-4 rounded-xl bg-[#0F0D0A] border border-[#241F18] space-y-3 text-xs">
               <div className="flex items-center gap-2 text-gray-400 font-semibold uppercase text-[10px] tracking-wider">
                 <Building2 className="w-3.5 h-3.5 text-[#D8B47A]" />
                 <span>Aurelle Bullion Treasury Account (Beneficiary Details)</span>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-[11px] text-gray-300">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-gray-300">
                 <div>Bank: <strong className="text-white">HDFC Bank Ltd.</strong></div>
                 <div>Account: <strong className="text-white">50200088991122</strong></div>
                 <div>IFSC: <strong className="text-white">HDFC0000060</strong></div>
@@ -775,7 +799,7 @@ export const SchemePage: React.FC = () => {
               <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400 block">
                 QA Verification &amp; Test Suite
               </span>
-              <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 text-[11px]">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1.5 text-[11px]">
                 {[
                   { id: 'success', label: 'Success' },
                   { id: 'failure', label: 'Bank Failure' },
@@ -815,12 +839,12 @@ export const SchemePage: React.FC = () => {
             )}
 
             {/* Modal Actions */}
-            <div className="pt-3 border-t border-[#241F18] flex justify-between items-center">
+            <div className="pt-3 border-t border-[#241F18] flex flex-col-reverse sm:flex-row gap-2.5 sm:gap-0 justify-between items-stretch sm:items-center">
               <button
                 type="button"
                 onClick={() => setPaymentModalOpen(false)}
                 disabled={isProcessingPayment}
-                className="text-xs text-gray-400 hover:text-white"
+                className="py-2.5 px-4 rounded-lg bg-[#18140F] sm:bg-transparent text-xs text-gray-400 hover:text-white text-center"
               >
                 Cancel
               </button>
@@ -828,7 +852,7 @@ export const SchemePage: React.FC = () => {
                 type="button"
                 onClick={handleExecutePayment}
                 disabled={isProcessingPayment}
-                className="px-6 py-2.5 rounded-lg bg-[#D8B47A] hover:bg-[#EBD5A8] text-[#090806] text-xs font-bold uppercase tracking-wider flex items-center gap-2 cursor-pointer shadow-lg disabled:opacity-50"
+                className="px-6 py-2.5 rounded-lg bg-[#D8B47A] hover:bg-[#EBD5A8] text-[#090806] text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-lg disabled:opacity-50"
               >
                 <Lock className="w-3.5 h-3.5" />
                 <span>{isProcessingPayment ? 'Verifying with Treasury...' : 'Verify & Remit Installment'}</span>
@@ -844,21 +868,21 @@ export const SchemePage: React.FC = () => {
       {/* ======================================================== */}
       {receiptModalOpen && activeReceipt && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/90 backdrop-blur-md overflow-y-auto overscroll-contain animate-in fade-in duration-200"
           onClick={(e) => {
             if (e.target === e.currentTarget) setReceiptModalOpen(false);
           }}
           role="dialog"
           aria-modal="true"
         >
-          <div className="bg-[#120F0B] border border-[#D8B47A]/60 rounded-2xl max-w-lg w-full p-6 sm:p-8 text-left shadow-2xl max-h-[92vh] overflow-y-auto space-y-6">
+          <div className="bg-[#120F0B] border border-[#D8B47A]/60 rounded-2xl max-w-lg w-full p-4 sm:p-8 text-left shadow-2xl my-auto max-h-[92vh] overflow-y-auto overscroll-contain space-y-5 sm:space-y-6">
             
             {/* Printable Receipt Box */}
-            <div id="aurelle-printable-receipt" className="space-y-6">
+            <div id="aurelle-printable-receipt" className="space-y-5 sm:space-y-6">
               
               {/* Header Crest */}
               <div className="text-center pb-4 border-b border-[#2B2319] space-y-1">
-                <span className="font-serif-luxury text-2xl font-normal tracking-[0.25em] text-[#F7F1E7] block">
+                <span className="font-serif-luxury text-xl sm:text-2xl font-normal tracking-[0.25em] text-[#F7F1E7] block">
                   AURELLE
                 </span>
                 <span className="text-[8px] uppercase tracking-[0.4em] text-[#D8B47A] block font-medium">
@@ -873,7 +897,7 @@ export const SchemePage: React.FC = () => {
               <div className="flex justify-between items-center text-xs">
                 <div>
                   <span className="text-[10px] uppercase font-bold text-gray-400 block">Receipt Number</span>
-                  <strong className="text-white font-mono text-sm">{activeReceipt.receipt.receiptNo}</strong>
+                  <strong className="text-white font-mono text-xs sm:text-sm">{activeReceipt.receipt.receiptNo}</strong>
                 </div>
                 <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
                   activeReceipt.receipt.status === 'PENDING'
@@ -885,7 +909,7 @@ export const SchemePage: React.FC = () => {
               </div>
 
               {/* Receipt Details Table */}
-              <div className="bg-[#16120D] border border-[#241F18] rounded-xl p-4 text-xs space-y-2.5">
+              <div className="bg-[#16120D] border border-[#241F18] rounded-xl p-3.5 sm:p-4 text-xs space-y-2.5">
                 <div className="flex justify-between">
                   <span className="text-gray-400">Patron Name:</span>
                   <strong className="text-white">{activeReceipt.enrollment.customerName}</strong>
@@ -900,7 +924,7 @@ export const SchemePage: React.FC = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Scheme Name:</span>
-                  <span className="text-white">{activeReceipt.enrollment.schemeName}</span>
+                  <span className="text-white truncate ml-2">{activeReceipt.enrollment.schemeName}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Installment Number:</span>
@@ -915,7 +939,7 @@ export const SchemePage: React.FC = () => {
                 {activeReceipt.receipt.transactionRef && (
                   <div className="flex justify-between">
                     <span className="text-gray-400">Bank Ref / UTR:</span>
-                    <span className="font-mono text-[#D8B47A] text-[11px]">
+                    <span className="font-mono text-[#D8B47A] text-[11px] truncate ml-2">
                       {activeReceipt.receipt.transactionRef}
                     </span>
                   </div>
@@ -946,18 +970,18 @@ export const SchemePage: React.FC = () => {
             </div>
 
             {/* Receipt Modal Footer Buttons */}
-            <div className="pt-4 border-t border-[#241F18] flex justify-between items-center">
+            <div className="pt-4 border-t border-[#241F18] flex flex-col-reverse sm:flex-row gap-2.5 sm:gap-0 justify-between items-stretch sm:items-center">
               <button
                 type="button"
                 onClick={() => setReceiptModalOpen(false)}
-                className="text-xs text-gray-400 hover:text-white"
+                className="py-2.5 px-4 rounded-lg bg-[#18140F] sm:bg-transparent text-xs text-gray-400 hover:text-white text-center"
               >
                 Close
               </button>
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="px-5 py-2 rounded-lg bg-[#D8B47A] hover:bg-[#EBD5A8] text-[#090806] text-xs font-bold uppercase tracking-wider flex items-center gap-2 cursor-pointer shadow-md"
+                className="px-5 py-2.5 rounded-lg bg-[#D8B47A] hover:bg-[#EBD5A8] text-[#090806] text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-md"
               >
                 <Printer className="w-4 h-4" />
                 <span>Print / Save Receipt</span>
@@ -973,17 +997,17 @@ export const SchemePage: React.FC = () => {
       {/* ======================================================== */}
       {enrollModalOpen && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-150"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md overflow-y-auto overscroll-contain animate-in fade-in duration-150"
           onClick={(e) => {
             if (e.target === e.currentTarget) setEnrollModalOpen(false);
           }}
           role="dialog"
           aria-modal="true"
         >
-          <div className="bg-[#120F0B] border border-[#D8B47A]/40 rounded-2xl max-w-lg w-full p-6 text-left shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-[#120F0B] border border-[#D8B47A]/40 rounded-2xl max-w-lg w-full p-4 sm:p-6 text-left shadow-2xl my-auto max-h-[92vh] overflow-y-auto overscroll-contain">
             <div className="flex items-center justify-between pb-3 border-b border-[#241F18] mb-4">
               <div>
-                <h3 className="font-display-luxury text-base font-bold text-white">
+                <h3 className="font-display-luxury text-sm sm:text-base font-bold text-white">
                   ENROL IN {selectedScheme.name.toUpperCase()}
                 </h3>
                 <p className="text-xs text-gray-400">{selectedScheme.tagline}</p>
@@ -1011,7 +1035,7 @@ export const SchemePage: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-gray-400 block mb-1">Email Address</label>
                   <input
@@ -1038,7 +1062,7 @@ export const SchemePage: React.FC = () => {
 
               <div>
                 <label className="text-gray-400 block mb-1">Monthly Contribution Amount</label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {selectedScheme.monthlyOptions.map((opt) => (
                     <button
                       key={opt}
@@ -1067,17 +1091,17 @@ export const SchemePage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-[#241F18] flex justify-between items-center">
+              <div className="pt-4 border-t border-[#241F18] flex flex-col-reverse sm:flex-row gap-2.5 sm:gap-0 justify-between items-stretch sm:items-center">
                 <button
                   type="button"
                   onClick={() => setEnrollModalOpen(false)}
-                  className="text-gray-400 hover:text-white"
+                  className="py-2.5 px-4 rounded-lg bg-[#18140F] sm:bg-transparent text-xs text-gray-400 hover:text-white text-center"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-lg bg-[#D8B47A] text-[#090806] font-bold uppercase tracking-wider hover:bg-[#EBD5A8]"
+                  className="px-6 py-2.5 rounded-lg bg-[#D8B47A] text-[#090806] font-bold uppercase tracking-wider hover:bg-[#EBD5A8] text-center shadow-md"
                 >
                   Authorize Enrollment
                 </button>

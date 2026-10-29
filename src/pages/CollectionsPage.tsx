@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Sparkles, Gem, Award, ShieldCheck } from 'lucide-react';
+import { AppointmentModal } from '../components/AppointmentModal';
 import { Category } from '../types';
 
 interface CollectionCard {
@@ -14,6 +15,7 @@ interface CollectionCard {
 }
 
 export const CollectionsPage: React.FC = () => {
+  const [appointmentModalOpen, setAppointmentModalOpen] = useState(false);
   const curatedCollections: CollectionCard[] = [
     {
       title: 'Bridal Jewellery',
@@ -184,16 +186,24 @@ export const CollectionsPage: React.FC = () => {
               >
                 Shop All Jewellery
               </Link>
-              <Link
-                to="/contact"
-                className="px-6 py-2.5 rounded-full bg-[#18140F] hover:bg-[#241F18] text-white border border-[#2C2720] text-xs font-semibold uppercase tracking-wider transition-colors"
+              <button
+                type="button"
+                onClick={() => setAppointmentModalOpen(true)}
+                className="px-6 py-2.5 rounded-full bg-[#18140F] hover:bg-[#241F18] text-white border border-[#2C2720] text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
               >
                 Book Private Salon Consultation
-              </Link>
+              </button>
             </div>
           </div>
         </div>
       </section>
+
+      {/* Appointment Consultation Modal */}
+      <AppointmentModal
+        isOpen={appointmentModalOpen}
+        onClose={() => setAppointmentModalOpen(false)}
+        defaultService="Bridal Suite & High Jewellery"
+      />
     </div>
   );
 };

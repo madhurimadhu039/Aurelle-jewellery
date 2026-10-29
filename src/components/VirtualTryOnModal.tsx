@@ -28,48 +28,59 @@ export const VirtualTryOnModal: React.FC<Props> = ({ product, onClose }) => {
   };
 
   React.useEffect(() => {
+    // Lock background page scroll while Try-On modal is open
+    const originalOverflow = document.body.style.overflow;
+    const originalPaddingRight = document.body.style.paddingRight;
+    document.body.style.overflow = 'hidden';
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = originalOverflow;
+      document.body.style.paddingRight = originalPaddingRight;
+    };
   }, [onClose]);
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 md:p-6 bg-black/90 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto overscroll-contain"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
       role="dialog"
       aria-modal="true"
     >
-      <div className="bg-[#12100C] border border-[#D8B47A]/50 rounded-2xl max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
+      <div className="bg-[#12100C] border border-[#D8B47A]/50 rounded-2xl max-w-4xl w-full max-h-[92vh] flex flex-col overflow-y-auto md:overflow-hidden shadow-2xl my-auto overscroll-contain">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#2C2720] bg-[#0E0C09]">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-[#D8B47A]/10 text-[#D8B47A] flex items-center justify-center">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-[#2C2720] bg-[#0E0C09] sticky top-0 z-20">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="w-8 h-8 rounded-full bg-[#D8B47A]/10 text-[#D8B47A] flex items-center justify-center flex-shrink-0">
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-display-luxury text-base font-bold text-[#F7F1E7]">
+              <h3 className="font-display-luxury text-sm sm:text-base font-bold text-[#F7F1E7] tracking-wide leading-tight">
                 AURELLE VIRTUAL TRY-ON STUDIO
               </h3>
-              <p className="text-xs text-gray-400">Interactive Augmented Fitting & Style Visualizer</p>
+              <p className="text-[10px] sm:text-xs text-gray-400">Interactive Augmented Fitting & Style Visualizer</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-[#1E1B15]"
+            aria-label="Close Try-On Studio"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#1E1B15] transition-colors flex-shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Studio Content */}
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 overflow-hidden">
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 overflow-y-auto md:overflow-hidden">
           {/* Main Visualizer Canvas Area */}
-          <div className="md:col-span-2 relative bg-[#070605] flex items-center justify-center min-h-[360px] md:min-h-[480px] overflow-hidden select-none">
+          <div className="md:col-span-2 relative bg-[#070605] flex items-center justify-center h-64 sm:h-80 md:min-h-[480px] overflow-hidden select-none">
             {/* Background Model Image */}
             <img
               src={modelImages[selectedModel]}
@@ -90,7 +101,7 @@ export const VirtualTryOnModal: React.FC<Props> = ({ product, onClose }) => {
           </div>
 
           {/* Controls & Product Specs Sidebar */}
-          <div className="p-5 bg-[#12100C] border-t md:border-t-0 md:border-l border-[#2C2720] flex flex-col justify-between overflow-y-auto">
+          <div className="p-4 sm:p-5 bg-[#12100C] border-t md:border-t-0 md:border-l border-[#2C2720] flex flex-col justify-between overflow-y-auto">
             <div className="space-y-5">
               {/* Product Info */}
               {product && (

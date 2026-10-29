@@ -480,7 +480,7 @@ export const PayDuePage: React.FC = () => {
         {/* Pay Balance Modal */}
         {payModalOpen && record && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"
+            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md overflow-y-auto overscroll-contain animate-in fade-in duration-200"
             onClick={() => {
               if (!isProcessing) setPayModalOpen(false);
             }}
@@ -488,7 +488,7 @@ export const PayDuePage: React.FC = () => {
             aria-modal="true"
           >
             <div
-              className="relative bg-[#120F0B] border border-[#D8B47A]/50 rounded-2xl max-w-lg w-full p-6 sm:p-7 text-left shadow-2xl overflow-hidden"
+              className="relative bg-[#120F0B] border border-[#D8B47A]/50 rounded-2xl max-w-lg w-full p-4 sm:p-7 text-left shadow-2xl my-auto max-h-[92vh] overflow-y-auto overscroll-contain"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Close Button */}
@@ -498,16 +498,17 @@ export const PayDuePage: React.FC = () => {
                   if (!isProcessing) setPayModalOpen(false);
                 }}
                 disabled={isProcessing}
-                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#18140F] hover:bg-[#251E17] text-gray-400 hover:text-white flex items-center justify-center text-xl font-light disabled:opacity-40"
+                aria-label="Close modal"
+                className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 w-9 h-9 rounded-full bg-[#18140F] hover:bg-[#251E17] text-gray-400 hover:text-white flex items-center justify-center text-xl font-light disabled:opacity-40 transition-colors"
               >
                 ×
               </button>
 
-              <div className="mb-5 pb-3 border-b border-[#241F18]">
+              <div className="mb-4 sm:mb-5 pb-3 border-b border-[#241F18] pr-8">
                 <span className="text-[10px] uppercase font-bold tracking-wider text-[#D8B47A]">
                   SECURE PAYMENT DISPATCH
                 </span>
-                <h3 className="font-serif-luxury text-xl font-bold text-white mt-0.5">
+                <h3 className="font-serif-luxury text-lg sm:text-xl font-bold text-white mt-0.5 break-words">
                   Settle Due Balance: {record.billNumber}
                 </h3>
               </div>
@@ -515,7 +516,7 @@ export const PayDuePage: React.FC = () => {
               {/* Gateway Notice Banner */}
               <div className="mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex items-start gap-2.5">
                 <Info className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
-                <div>
+                <div className="text-[11px] sm:text-xs">
                   <strong>Boutique Payment Clearing:</strong> Payments recorded here instantly reconcile your account balance, register in your customer ledger, and issue an official receipt.
                 </div>
               </div>
@@ -531,57 +532,57 @@ export const PayDuePage: React.FC = () => {
                       max={record.balanceDue}
                       value={payAmount}
                       onChange={(e) => setPayAmount(parseInt(e.target.value) || 0)}
-                      className="w-full bg-[#18140F] border border-[#2C2720] focus:border-[#D8B47A] rounded-xl p-3 text-white font-bold text-base focus:outline-none"
+                      className="w-full bg-[#18140F] border border-[#2C2720] focus:border-[#D8B47A] rounded-xl p-3 pr-28 sm:pr-36 text-white font-bold text-base focus:outline-none"
                     />
                     <button
                       type="button"
                       onClick={() => setPayAmount(record.balanceDue)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#D8B47A] uppercase font-bold tracking-wider hover:underline"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] sm:text-[10px] text-[#D8B47A] uppercase font-bold tracking-wider hover:underline bg-[#221B14] px-2 py-1 rounded"
                     >
-                      Pay Full Due ({formatINR(record.balanceDue)})
+                      Pay Full Due
                     </button>
                   </div>
                 </div>
 
                 <div>
                   <label className="text-gray-300 block mb-1 font-medium">Select Payment Method</label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <button
                       type="button"
                       onClick={() => setPaymentMode('UPI')}
-                      className={`p-3 rounded-xl border text-center transition-all ${
+                      className={`p-3 rounded-xl border flex sm:flex-col items-center justify-start sm:justify-center gap-2.5 sm:gap-1 transition-all ${
                         paymentMode === 'UPI'
                           ? 'bg-[#D8B47A]/15 border-[#D8B47A] text-[#D8B47A]'
                           : 'bg-[#18140F] border-[#2C2720] text-gray-400 hover:text-white'
                       }`}
                     >
-                      <QrCode className="w-5 h-5 mx-auto mb-1" />
+                      <QrCode className="w-5 h-5 flex-shrink-0" />
                       <span className="font-semibold block text-[11px]">UPI / QR</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setPaymentMode('CARD')}
-                      className={`p-3 rounded-xl border text-center transition-all ${
+                      className={`p-3 rounded-xl border flex sm:flex-col items-center justify-start sm:justify-center gap-2.5 sm:gap-1 transition-all ${
                         paymentMode === 'CARD'
                           ? 'bg-[#D8B47A]/15 border-[#D8B47A] text-[#D8B47A]'
                           : 'bg-[#18140F] border-[#2C2720] text-gray-400 hover:text-white'
                       }`}
                     >
-                      <CreditCard className="w-5 h-5 mx-auto mb-1" />
+                      <CreditCard className="w-5 h-5 flex-shrink-0" />
                       <span className="font-semibold block text-[11px]">Credit Card</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setPaymentMode('NET_BANKING')}
-                      className={`p-3 rounded-xl border text-center transition-all ${
+                      className={`p-3 rounded-xl border flex sm:flex-col items-center justify-start sm:justify-center gap-2.5 sm:gap-1 transition-all ${
                         paymentMode === 'NET_BANKING'
                           ? 'bg-[#D8B47A]/15 border-[#D8B47A] text-[#D8B47A]'
                           : 'bg-[#18140F] border-[#2C2720] text-gray-400 hover:text-white'
                       }`}
                     >
-                      <ShieldCheck className="w-5 h-5 mx-auto mb-1" />
+                      <ShieldCheck className="w-5 h-5 flex-shrink-0" />
                       <span className="font-semibold block text-[11px]">Net Banking</span>
                     </button>
                   </div>

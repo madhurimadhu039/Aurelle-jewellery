@@ -140,14 +140,17 @@ export const AdminPage: React.FC = () => {
   const [ledDesc, setLedDesc] = useState('');
   const [ledNotes, setLedNotes] = useState('');
 
-  // Listen to keyboard Escape key when modal is open
+  // Listen to keyboard Escape key when modal is open and lock background scroll
   useEffect(() => {
+    const isAnyModalOpen = productModalOpen || schemeModalOpen || ledgerModalOpen;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && productModalOpen) {
-        handleCloseModal();
+      if (e.key === 'Escape') {
+        if (productModalOpen) handleCloseModal();
+        if (schemeModalOpen) setSchemeModalOpen(false);
+        if (ledgerModalOpen) setLedgerModalOpen(false);
       }
     };
-    if (productModalOpen) {
+    if (isAnyModalOpen) {
       window.addEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'hidden';
     }
@@ -155,7 +158,7 @@ export const AdminPage: React.FC = () => {
       window.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'unset';
     };
-  }, [productModalOpen, formIsDirty]);
+  }, [productModalOpen, schemeModalOpen, ledgerModalOpen, formIsDirty]);
 
   // Keep rates in sync when context rates change
   useEffect(() => {
@@ -571,12 +574,12 @@ export const AdminPage: React.FC = () => {
 
     return (
       <div 
-        className="min-h-screen bg-[#090806] text-white flex flex-col items-center justify-center p-4 sm:p-6 text-center"
+        className="min-h-screen bg-[#090806] text-white flex flex-col items-center justify-center p-3 sm:p-6 text-center overflow-y-auto overscroll-contain"
         onClick={(e) => {
           if (e.target === e.currentTarget) handleClose();
         }}
       >
-        <div className="max-w-md w-full bg-[#120F0B] border border-[#D8B47A]/40 rounded-3xl p-8 sm:p-10 shadow-2xl relative text-left animate-in fade-in zoom-in-95 duration-150">
+        <div className="max-w-md w-full bg-[#120F0B] border border-[#D8B47A]/40 rounded-3xl p-5 sm:p-8 md:p-10 shadow-2xl relative text-left animate-in fade-in zoom-in-95 duration-150 my-auto max-h-[92vh] overflow-y-auto overscroll-contain">
           
           {/* Top-Right Close Button ("*" / "✕" mark) */}
           <button
@@ -1624,23 +1627,24 @@ export const AdminPage: React.FC = () => {
       ========================================================= */}
       {schemeModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md overflow-y-auto overscroll-contain animate-in fade-in duration-200"
           onClick={() => setSchemeModalOpen(false)}
           role="dialog"
           aria-modal="true"
         >
           <div
-            className="bg-[#120F0B] border border-[#D8B47A]/50 rounded-2xl max-w-lg w-full p-6 text-left shadow-2xl relative"
+            className="bg-[#120F0B] border border-[#D8B47A]/50 rounded-2xl max-w-lg w-full p-4 sm:p-6 text-left shadow-2xl relative my-auto max-h-[92vh] overflow-y-auto overscroll-contain"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               type="button"
               onClick={() => setSchemeModalOpen(false)}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#1A1510] text-[#D8B47A] hover:text-white border border-[#D8B47A]/30 flex items-center justify-center text-xl"
+              aria-label="Close dialog"
+              className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 w-8 h-8 rounded-full bg-[#1A1510] text-[#D8B47A] hover:text-white border border-[#D8B47A]/30 flex items-center justify-center text-xl transition-colors"
             >
               &times;
             </button>
-            <h3 className="font-serif-luxury text-lg font-bold text-white mb-4">
+            <h3 className="font-serif-luxury text-base sm:text-lg font-bold text-white mb-4 pr-8">
               {editingSchemeId ? 'EDIT SAVINGS SCHEME' : 'CONFIGURE NEW SAVINGS SCHEME'}
             </h3>
             <form onSubmit={handleSaveScheme} className="space-y-3.5 text-xs">
@@ -1665,7 +1669,7 @@ export const AdminPage: React.FC = () => {
                   className="w-full bg-[#18140F] border border-[#2B2319] rounded-lg p-2.5 text-white"
                 />
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
                 <div>
                   <label className="text-gray-300 block mb-1">Tenure (Months)</label>
                   <input
@@ -1715,17 +1719,17 @@ export const AdminPage: React.FC = () => {
                   className="w-full bg-[#18140F] border border-[#2B2319] rounded-lg p-2.5 text-white"
                 />
               </div>
-              <div className="pt-2 flex justify-end gap-2">
+              <div className="pt-2 flex flex-col-reverse sm:flex-row justify-end gap-2.5 sm:gap-2">
                 <button
                   type="button"
                   onClick={() => setSchemeModalOpen(false)}
-                  className="px-4 py-2 rounded-lg border border-[#2B2319] text-gray-400"
+                  className="px-4 py-2.5 rounded-lg border border-[#2B2319] text-gray-400 hover:text-white text-center"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 rounded-lg bg-[#D8B47A] text-[#090806] font-bold uppercase tracking-wider"
+                  className="px-6 py-2.5 rounded-lg bg-[#D8B47A] text-[#090806] font-bold uppercase tracking-wider text-center"
                 >
                   Save Scheme
                 </button>
@@ -1740,27 +1744,28 @@ export const AdminPage: React.FC = () => {
       ========================================================= */}
       {ledgerModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md overflow-y-auto overscroll-contain animate-in fade-in duration-200"
           onClick={() => setLedgerModalOpen(false)}
           role="dialog"
           aria-modal="true"
         >
           <div
-            className="bg-[#120F0B] border border-[#D8B47A]/50 rounded-2xl max-w-lg w-full p-6 text-left shadow-2xl relative"
+            className="bg-[#120F0B] border border-[#D8B47A]/50 rounded-2xl max-w-lg w-full p-4 sm:p-6 text-left shadow-2xl relative my-auto max-h-[92vh] overflow-y-auto overscroll-contain"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               type="button"
               onClick={() => setLedgerModalOpen(false)}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#1A1510] text-[#D8B47A] hover:text-white border border-[#D8B47A]/30 flex items-center justify-center text-xl"
+              aria-label="Close dialog"
+              className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 w-8 h-8 rounded-full bg-[#1A1510] text-[#D8B47A] hover:text-white border border-[#D8B47A]/30 flex items-center justify-center text-xl transition-colors"
             >
               &times;
             </button>
-            <h3 className="font-serif-luxury text-lg font-bold text-white mb-4">
+            <h3 className="font-serif-luxury text-base sm:text-lg font-bold text-white mb-4 pr-8">
               RECORD AUDITED CUSTOMER LEDGER ADJUSTMENT
             </h3>
             <form onSubmit={handleSaveLedgerEntry} className="space-y-3.5 text-xs">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                 <div>
                   <label className="text-gray-300 block mb-1">Customer Full Name *</label>
                   <input
@@ -1783,7 +1788,7 @@ export const AdminPage: React.FC = () => {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                 <div>
                   <label className="text-gray-300 block mb-1">Transaction Type</label>
                   <select
@@ -1808,7 +1813,7 @@ export const AdminPage: React.FC = () => {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                 <div>
                   <label className="text-gray-300 block mb-1">Debit Amount (₹)</label>
                   <input
@@ -1849,17 +1854,17 @@ export const AdminPage: React.FC = () => {
                   className="w-full bg-[#18140F] border border-[#2B2319] rounded-lg p-2.5 text-white"
                 />
               </div>
-              <div className="pt-2 flex justify-end gap-2">
+              <div className="pt-2 flex flex-col-reverse sm:flex-row justify-end gap-2.5 sm:gap-2">
                 <button
                   type="button"
                   onClick={() => setLedgerModalOpen(false)}
-                  className="px-4 py-2 rounded-lg border border-[#2B2319] text-gray-400"
+                  className="px-4 py-2.5 rounded-lg border border-[#2B2319] text-gray-400 hover:text-white text-center"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 rounded-lg bg-[#D8B47A] text-[#090806] font-bold uppercase tracking-wider"
+                  className="px-6 py-2.5 rounded-lg bg-[#D8B47A] text-[#090806] font-bold uppercase tracking-wider text-center"
                 >
                   Record Entry
                 </button>
@@ -1880,7 +1885,7 @@ export const AdminPage: React.FC = () => {
       ========================================================= */}
       {productModalOpen && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-150"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md overflow-y-auto overscroll-contain animate-in fade-in duration-150"
           onClick={(e) => {
             // Close when clicking directly on backdrop
             if (e.target === e.currentTarget) {
@@ -1893,7 +1898,7 @@ export const AdminPage: React.FC = () => {
         >
           <div 
             ref={modalRef}
-            className="bg-[#120F0B] border border-[#D8B47A]/50 rounded-2xl max-w-xl w-full p-6 text-left shadow-2xl max-h-[90vh] overflow-y-auto"
+            className="bg-[#120F0B] border border-[#D8B47A]/50 rounded-2xl max-w-xl w-full p-4 sm:p-6 text-left shadow-2xl my-auto max-h-[92vh] overflow-y-auto overscroll-contain"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
@@ -2097,18 +2102,18 @@ export const AdminPage: React.FC = () => {
               </div>
 
               {/* Action Buttons */}
-              <div className="pt-4 border-t border-[#241F18] flex items-center justify-between gap-3">
+              <div className="pt-4 border-t border-[#241F18] flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3">
                 <button
                   type="button"
                   onClick={handleCloseModal}
-                  className="px-4 py-2.5 rounded-lg border border-[#2B2319] text-gray-400 hover:text-white hover:border-gray-500 transition-colors"
+                  className="px-4 py-2.5 rounded-lg border border-[#2B2319] text-gray-400 hover:text-white hover:border-gray-500 transition-colors text-center"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={savingProduct}
-                  className="px-6 py-2.5 rounded-lg bg-[#D8B47A] hover:bg-[#EBD5A8] text-[#090806] font-bold uppercase tracking-wider text-xs transition-colors disabled:opacity-50"
+                  className="px-6 py-2.5 rounded-lg bg-[#D8B47A] hover:bg-[#EBD5A8] text-[#090806] font-bold uppercase tracking-wider text-xs transition-colors disabled:opacity-50 text-center"
                 >
                   {savingProduct ? 'Saving to Vault...' : editingProductId ? 'Save Creation' : 'Publish Piece'}
                 </button>
