@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -16,6 +16,7 @@ import {
 import { GoldRateBanner } from '../components/GoldRateBanner';
 import { DailyGoldRatePanel } from '../components/DailyGoldRatePanel';
 import { VirtualTryOnModal } from '../components/VirtualTryOnModal';
+import { MainCategoryNav, MainCategoryKey } from '../components/MainCategoryNav';
 import { useApp } from '../contexts/AppContext';
 import { productService } from '../services/productService';
 import { payDueService } from '../services/payDueService';
@@ -23,7 +24,30 @@ import { Product, PayDueRecord } from '../types';
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toggleWishlist, isInWishlist, formatINR, products, user, isAdmin } = useApp();
+
+  const urlCategory = searchParams.get('category') || 'All Jewellery';
+  const [selectedCategory, setSelectedCategory] = useState<string>(urlCategory);
+
+  // Sync state if URL search parameters change
+  useEffect(() => {
+    if (searchParams.get('category')) {
+      setSelectedCategory(searchParams.get('category')!);
+    }
+  }, [searchParams]);
+
+  const handleCategorySelect = (cat: MainCategoryKey) => {
+    if (cat === 'All Jewellery') {
+      navigate('/shop');
+    } else {
+      navigate(`/shop?category=${encodeURIComponent(cat)}`);
+    }
+  };
+
+  const displayedProducts = useMemo(() => {
+    return productService.filterProducts({ category: selectedCategory });
+  }, [products, selectedCategory]);
 
   const [heroSlide, setHeroSlide] = useState(0);
   const [payDueQuery, setPayDueQuery] = useState('');
@@ -172,16 +196,6 @@ export const HomePage: React.FC = () => {
     },
   ];
 
-  // Featured Products matching all published pieces
-  const featured = products.filter((p) => p.isPublished !== false).length >= 4
-    ? products.filter((p) => p.isPublished !== false)
-    : [
-        products.find((p) => p.name.includes('Royal Solitaire')) || products[0],
-        products.find((p) => p.name.includes('Eternal Diamond Necklace')) || products[1],
-        products.find((p) => p.name.includes('Golden Heritage Earrings')) || products[2],
-        products.find((p) => p.name.includes('Graceful')) || products[3],
-      ];
-
   const handlePayDueSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const query = payDueQuery.trim();
@@ -223,6 +237,14 @@ export const HomePage: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#090806] text-[#F7F1E7] selection:bg-[#D8B47A]/30 selection:text-[#D8B47A]">
       
+      {/* ======================================================== */}
+      {/* 0. MAIN JEWELLERY CATEGORIES NAVIGATION (Directly below main header) */}
+      {/* ======================================================== */}
+      <MainCategoryNav
+        activeCategory={selectedCategory}
+        onSelectCategory={handleCategorySelect}
+      />
+
       {/* ======================================================== */}
       {/* 1. HERO SECTION — EXACT REFERENCE MATCH */}
       {/* ======================================================== */}
@@ -554,130 +576,166 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* ======================================================== */}
-      {/* 6. FEATURED PRODUCTS SECTION — WARM IVORY BACKGROUND */}
+      {/* 6. MAIN SHOPPING / FEATURED PRODUCTS SECTION — WARM IVORY BACKGROUND */}
       {/* ======================================================== */}
-      <section className="bg-[#FAF7F2] text-[#090806] py-14 sm:py-16 text-left">
+      <section id="shopping-products-section" className="bg-[#FAF7F2] text-[#090806] py-14 sm:py-16 text-left scroll-mt-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           {/* Header */}
-          <div className="flex items-end justify-between mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
             <div>
-              <h2 className="font-serif-luxury text-2xl sm:text-3xl font-medium text-[#090806]">
-                Featured Products
+              <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.22em] text-[#9E7A3E] font-bold mb-1">
+                CURATED SHOPPING
+              </div>
+              <h2 className="font-serif-luxury text-2xl sm:text-3xl font-medium text-[#090806] flex items-baseline gap-2.5 flex-wrap">
+                <span>{selectedCategory === 'All' ? 'All Jewellery' : selectedCategory}</span>
+                <span className="text-xs sm:text-sm font-sans font-normal text-[#6B6357]">
+                  ({displayedProducts.length} {displayedProducts.length === 1 ? 'creation' : 'creations'})
+                </span>
               </h2>
               <p className="text-xs sm:text-[13px] text-[#6B6357] font-light mt-0.5">
-                Exquisite pieces, crafted for you
+                Certified 22K/24K hallmarked gold &amp; natural conflict-free solitaires
               </p>
             </div>
-            <Link
-              to="/shop"
-              className="text-[11px] sm:text-xs font-semibold tracking-wider text-[#090806] hover:text-[#9E7A3E] flex items-center gap-1.5 transition-colors"
-            >
-              <span>View All</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          {/* Products Carousel */}
-          <div className="relative">
-            {/* Left Carousel Arrow */}
-            <button
-              onClick={() => {
-                const el = document.getElementById('featured-carousel');
-                if (el) {
-                  const scrollAmount = Math.max(280, el.clientWidth * 0.75);
-                  el.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
-                }
-              }}
-              className="flex absolute -left-3 sm:-left-5 top-1/2 -translate-y-1/2 z-20 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/95 hover:bg-white shadow-[0_4px_14px_rgba(0,0,0,0.18)] text-[#090806] hover:text-[#9E7A3E] items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 border border-[#E7DFD5] cursor-pointer"
-              aria-label="Previous Products"
-            >
-              <ChevronLeft className="w-5 h-5 stroke-[2]" />
-            </button>
-
-            {/* Right Carousel Arrow */}
-            <button
-              onClick={() => {
-                const el = document.getElementById('featured-carousel');
-                if (el) {
-                  const scrollAmount = Math.max(280, el.clientWidth * 0.75);
-                  el.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-                }
-              }}
-              className="flex absolute -right-3 sm:-right-5 top-1/2 -translate-y-1/2 z-20 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/95 hover:bg-white shadow-[0_4px_14px_rgba(0,0,0,0.18)] text-[#090806] hover:text-[#9E7A3E] items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 border border-[#E7DFD5] cursor-pointer"
-              aria-label="Next Products"
-            >
-              <ChevronRight className="w-5 h-5 stroke-[2]" />
-            </button>
-
-            <div
-              id="featured-carousel"
-              className="flex gap-4 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory py-2"
-            >
-              {featured.map((prod) => {
-                const wishlisted = isInWishlist(prod.id);
-                return (
-                  <div
-                    key={prod.id}
-                    className="flex-none w-[260px] sm:w-[calc(50%-12px)] lg:w-[calc(25%-18px)] snap-start group bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
-                  >
-                    {/* Top Image Container with dark moody jewellery photography */}
-                    <div className="relative aspect-square bg-[#0C0A08] overflow-hidden">
-                      <Link to={`/product/${prod.id}`} className="block w-full h-full">
-                        <img
-                          src={prod.images[0] || (prod.category === 'Bracelets' ? '/images/bracelet-2.jpg' : '/images/editorial-ring.jpg')}
-                          alt={prod.name}
-                          onError={(e) => {
-                            const target = e.currentTarget;
-                            if (prod.category === 'Bracelets') {
-                              target.src = '/images/bracelet-2.jpg';
-                            } else {
-                              target.src = '/images/editorial-ring.jpg';
-                            }
-                          }}
-                          className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-108"
-                        />
-                      </Link>
-
-                      {/* Wishlist Heart Icon Top-Right */}
-                      <button
-                        onClick={() => toggleWishlist(prod)}
-                        className={`absolute top-2.5 right-2.5 w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
-                          wishlisted
-                            ? 'text-rose-500 bg-white/90'
-                            : 'text-white/80 hover:text-white bg-black/40 hover:bg-black/60'
-                        }`}
-                        aria-label="Save to Wishlist"
-                      >
-                        <Heart className={`w-3.5 h-3.5 ${wishlisted ? 'fill-current' : ''}`} />
-                      </button>
-
-                      {/* Bottom-right interactive preview indicator */}
-                      <button
-                        onClick={() => setTryOnProduct(prod)}
-                        className="absolute bottom-2.5 right-2.5 text-[10px] text-white/70 hover:text-white bg-black/50 px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="Virtual Try-On"
-                      >
-                        Try On
-                      </button>
-                    </div>
-
-                    {/* Bottom White Info Box */}
-                    <div className="p-3.5 text-left">
-                      <Link to={`/product/${prod.id}`} className="block">
-                        <h4 className="font-serif-luxury text-[14px] sm:text-[15px] font-medium text-[#090806] group-hover:text-[#9E7A3E] transition-colors truncate">
-                          {prod.name}
-                        </h4>
-                      </Link>
-                      <div className="text-[12px] sm:text-[13px] font-bold text-[#24170F] mt-1 tracking-wide">
-                        {formatINR(prod.price)}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="flex items-center gap-3">
+              {selectedCategory !== 'All Jewellery' && selectedCategory !== 'All' && (
+                <button
+                  onClick={() => handleCategorySelect('All Jewellery')}
+                  className="text-xs text-[#9E7A3E] hover:underline font-medium cursor-pointer"
+                >
+                  Reset to All Jewellery
+                </button>
+              )}
+              <Link
+                to={selectedCategory === 'All Jewellery' || selectedCategory === 'All' ? '/shop' : `/shop?category=${encodeURIComponent(selectedCategory)}`}
+                className="text-[11px] sm:text-xs font-semibold tracking-wider text-[#090806] hover:text-[#9E7A3E] flex items-center gap-1.5 transition-colors"
+              >
+                <span>Explore in Full Shop</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
           </div>
+
+          {/* Products Carousel or Empty State */}
+          {displayedProducts.length === 0 ? (
+            <div className="py-14 text-center bg-white rounded-xl p-8 border border-[#E7DFD5]">
+              <div className="w-12 h-12 rounded-full bg-[#FAF7F2] text-[#9E7A3E] flex items-center justify-center mx-auto mb-3">
+                <Sparkles className="w-6 h-6" />
+              </div>
+              <h3 className="font-serif-luxury text-xl font-medium text-[#090806] mb-1">
+                No matching {selectedCategory} creations found
+              </h3>
+              <p className="text-xs text-[#6B6357] max-w-sm mx-auto mb-4 font-light">
+                We are continuously curating new heirloom creations. Explore our complete royal collection below.
+              </p>
+              <button
+                onClick={() => handleCategorySelect('All Jewellery')}
+                className="px-6 py-2 rounded-full bg-[#090806] text-white text-xs font-semibold uppercase tracking-wider hover:bg-[#9E7A3E] transition-colors cursor-pointer"
+              >
+                View All Jewellery
+              </button>
+            </div>
+          ) : (
+            <div className="relative">
+              {/* Left Carousel Arrow */}
+              <button
+                onClick={() => {
+                  const el = document.getElementById('featured-carousel');
+                  if (el) {
+                    const scrollAmount = Math.max(280, el.clientWidth * 0.75);
+                    el.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+                  }
+                }}
+                className="flex absolute -left-3 sm:-left-5 top-1/2 -translate-y-1/2 z-20 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/95 hover:bg-white shadow-[0_4px_14px_rgba(0,0,0,0.18)] text-[#090806] hover:text-[#9E7A3E] items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 border border-[#E7DFD5] cursor-pointer"
+                aria-label="Previous Products"
+              >
+                <ChevronLeft className="w-5 h-5 stroke-[2]" />
+              </button>
+
+              {/* Right Carousel Arrow */}
+              <button
+                onClick={() => {
+                  const el = document.getElementById('featured-carousel');
+                  if (el) {
+                    const scrollAmount = Math.max(280, el.clientWidth * 0.75);
+                    el.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+                  }
+                }}
+                className="flex absolute -right-3 sm:-right-5 top-1/2 -translate-y-1/2 z-20 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/95 hover:bg-white shadow-[0_4px_14px_rgba(0,0,0,0.18)] text-[#090806] hover:text-[#9E7A3E] items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 border border-[#E7DFD5] cursor-pointer"
+                aria-label="Next Products"
+              >
+                <ChevronRight className="w-5 h-5 stroke-[2]" />
+              </button>
+
+              <div
+                id="featured-carousel"
+                className="flex gap-4 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory py-2"
+              >
+                {displayedProducts.map((prod) => {
+                  const wishlisted = isInWishlist(prod.id);
+                  return (
+                    <div
+                      key={prod.id}
+                      className="flex-none w-[260px] sm:w-[calc(50%-12px)] lg:w-[calc(25%-18px)] snap-start group bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
+                    >
+                      {/* Top Image Container with dark moody jewellery photography */}
+                      <div className="relative aspect-square bg-[#0C0A08] overflow-hidden">
+                        <Link to={`/product/${prod.id}`} className="block w-full h-full">
+                          <img
+                            src={prod.images[0] || (prod.category === 'Bracelets' ? '/images/bracelet-2.jpg' : '/images/editorial-ring.jpg')}
+                            alt={prod.name}
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              if (prod.category === 'Bracelets') {
+                                target.src = '/images/bracelet-2.jpg';
+                              } else {
+                                target.src = '/images/editorial-ring.jpg';
+                              }
+                            }}
+                            className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-108"
+                          />
+                        </Link>
+
+                        {/* Wishlist Heart Icon Top-Right */}
+                        <button
+                          onClick={() => toggleWishlist(prod)}
+                          className={`absolute top-2.5 right-2.5 w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
+                            wishlisted
+                              ? 'text-rose-500 bg-white/90'
+                              : 'text-white/80 hover:text-white bg-black/40 hover:bg-black/60'
+                          }`}
+                          aria-label="Save to Wishlist"
+                        >
+                          <Heart className={`w-3.5 h-3.5 ${wishlisted ? 'fill-current' : ''}`} />
+                        </button>
+
+                        {/* Bottom-right interactive preview indicator */}
+                        <button
+                          onClick={() => setTryOnProduct(prod)}
+                          className="absolute bottom-2.5 right-2.5 text-[10px] text-white/70 hover:text-white bg-black/50 px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                          title="Virtual Try-On"
+                        >
+                          Try On
+                        </button>
+                      </div>
+
+                      {/* Bottom White Info Box */}
+                      <div className="p-3.5 text-left">
+                        <Link to={`/product/${prod.id}`} className="block">
+                          <h4 className="font-serif-luxury text-[14px] sm:text-[15px] font-medium text-[#090806] group-hover:text-[#9E7A3E] transition-colors truncate">
+                            {prod.name}
+                          </h4>
+                        </Link>
+                        <div className="text-[12px] sm:text-[13px] font-bold text-[#24170F] mt-1 tracking-wide">
+                          {formatINR(prod.price)}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
         </div>
       </section>

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { ProductCard } from '../components/ProductCard';
 import { VirtualTryOnModal } from '../components/VirtualTryOnModal';
+import { MainCategoryNav, MainCategoryKey } from '../components/MainCategoryNav';
 import { productService } from '../services/productService';
 import { Product, Category } from '../types';
 import { useApp } from '../contexts/AppContext';
@@ -22,14 +23,14 @@ export const ShopPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { formatINR, products } = useApp();
 
-  const urlCategory = searchParams.get('category') || 'All';
+  const urlCategory = searchParams.get('category') || 'All Jewellery';
   const urlSearch = searchParams.get('search') || '';
 
   const [selectedCategory, setSelectedCategory] = useState<string>(urlCategory);
   const [searchQuery, setSearchQuery] = useState<string>(urlSearch);
   const [selectedPurity, setSelectedPurity] = useState<string>('All');
   const [selectedStyle, setSelectedStyle] = useState<string>('All');
-  const [maxPrice, setMaxPrice] = useState<number>(600000);
+  const [maxPrice, setMaxPrice] = useState<number>(1000000);
   const [sortBy, setSortBy] = useState<'featured' | 'price-asc' | 'price-desc' | 'rating' | 'newest'>('featured');
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [tryOnProduct, setTryOnProduct] = useState<Product | null>(null);
@@ -38,14 +39,36 @@ export const ShopPage: React.FC = () => {
   useEffect(() => {
     if (searchParams.get('category')) {
       setSelectedCategory(searchParams.get('category')!);
+    } else {
+      setSelectedCategory('All Jewellery');
     }
     if (searchParams.get('search') !== null) {
       setSearchQuery(searchParams.get('search') || '');
     }
   }, [searchParams]);
 
-  const categories: (Category | 'All')[] = [
-    'All',
+  const handleSelectCategory = (cat: string) => {
+    setSelectedCategory(cat);
+    const nextParams = new URLSearchParams(searchParams);
+    if (cat === 'All Jewellery' || cat === 'All') {
+      nextParams.delete('category');
+    } else {
+      nextParams.set('category', cat);
+    }
+    setSearchParams(nextParams);
+  };
+
+  const mainCategoriesList = [
+    'All Jewellery',
+    'Gold',
+    'Diamonds',
+    'Wedding',
+    'Daily Wear',
+    'Earrings',
+    'Under ₹50K',
+  ];
+
+  const silhouetteCategories: Category[] = [
     'Rings',
     'Necklaces',
     'Earrings',
@@ -54,7 +77,6 @@ export const ShopPage: React.FC = () => {
     'Pendants',
     'Mangalsutras',
     'Bridal Jewellery',
-    'New Arrivals',
   ];
 
   const purities = ['All', '24K', '22K', '18K', '14K'];
@@ -82,47 +104,94 @@ export const ShopPage: React.FC = () => {
   }, [products, selectedCategory, searchQuery, selectedPurity, selectedStyle, maxPrice, sortBy]);
 
   const resetFilters = () => {
-    setSelectedCategory('All');
+    setSelectedCategory('All Jewellery');
     setSearchQuery('');
     setSelectedPurity('All');
     setSelectedStyle('All');
-    setMaxPrice(600000);
+    setMaxPrice(1000000);
     setSortBy('featured');
     setSearchParams({});
   };
 
   const hasActiveFilters = 
-    selectedCategory !== 'All' || 
+    (selectedCategory !== 'All' && selectedCategory !== 'All Jewellery') || 
     searchQuery !== '' || 
     selectedPurity !== 'All' || 
     selectedStyle !== 'All' || 
-    maxPrice < 600000;
+    maxPrice < 1000000;
+
+  const getCategoryDescription = (category: string) => {
+    switch (category) {
+      case 'Gold':
+        return 'Pure 22K and 24K solid hallmarked gold heirlooms, Kasu Malas, temple Nakshi, and broad kadas.';
+      case 'Diamonds':
+        return 'Natural conflict-free solitaires, brilliant-cut diamond necklaces, tennis bracelets, and certified diamond rings.';
+      case 'Wedding':
+        return 'Opulent heavy royal bridal trousseau sets, grand temple Nakshi waistbands, and heavy 22K heirloom haars.';
+      case 'Daily Wear':
+        return 'Featherlight, modern minimalist jewellery crafted for comfortable everyday luxury and workwear.';
+      case 'Earrings':
+        return 'Handcrafted royal Deccan chandbalis, delicate floral studs, heavy bridal jhumkas, and diamond drops.';
+      case 'Under ₹50K':
+        return 'Accessible fine luxury — certified gold and natural diamond creations priced under ₹50,000.';
+      default:
+        return 'Certified 22K/24K hallmarked gold creations, natural conflict-free solitaires, and royal bridal heirlooms.';
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-[#090806] text-[#F7F1E7] selection:bg-[#D8B47A]/30 selection:text-[#D8B47A] py-10">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#090806] text-[#F7F1E7] selection:bg-[#D8B47A]/30 selection:text-[#D8B47A]">
+      
+      {/* ======================================================== */}
+      {/* 1. MAIN CATEGORY NAVIGATION STRIP (Directly below header) */}
+      {/* ======================================================== */}
+      <MainCategoryNav
+        activeCategory={selectedCategory}
+        onSelectCategory={(cat) => handleSelectCategory(cat)}
+      />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
         
-        {/* Breadcrumb & Main Heading */}
-        <div className="mb-8 text-left">
-          <nav className="text-xs text-gray-500 mb-2">
-            <Link to="/" className="hover:text-white">Home</Link>
-            <span className="mx-2 text-gray-700">/</span>
-            <span className="text-[#D8B47A]">Shop</span>
-            {selectedCategory !== 'All' && (
-              <>
-                <span className="mx-2 text-gray-700">/</span>
-                <span className="text-white">{selectedCategory}</span>
-              </>
+        {/* Breadcrumb Navigation matching reference layout */}
+        <nav className="text-xs text-gray-500 mb-3 text-left flex items-center gap-1.5 flex-wrap">
+          <Link to="/" className="hover:text-white transition-colors">Home</Link>
+          <span className="text-gray-700">/</span>
+          <Link 
+            to="/shop" 
+            onClick={() => handleSelectCategory('All Jewellery')} 
+            className={`hover:text-white transition-colors ${selectedCategory === 'All' || selectedCategory === 'All Jewellery' ? 'text-[#D8B47A]' : ''}`}
+          >
+            Shop
+          </Link>
+          {selectedCategory !== 'All' && selectedCategory !== 'All Jewellery' && (
+            <>
+              <span className="text-gray-700">/</span>
+              <span className="text-[#D8B47A] font-medium">{selectedCategory}</span>
+            </>
+          )}
+        </nav>
+
+        {/* Category Heading & Dynamic Result Count */}
+        <div className="mb-7 text-left">
+          <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3">
+            <h1 className="font-serif-luxury text-3xl sm:text-4xl lg:text-5xl font-normal text-white flex items-baseline gap-3 flex-wrap">
+              <span>{selectedCategory === 'All' ? 'All Jewellery' : selectedCategory}</span>
+              <span className="text-sm sm:text-base font-sans font-light text-gray-400">
+                ({filteredProducts.length} {filteredProducts.length === 1 ? 'result' : 'results'})
+              </span>
+            </h1>
+
+            {hasActiveFilters && (
+              <button
+                onClick={resetFilters}
+                className="text-xs text-[#D8B47A] hover:underline flex items-center gap-1 font-medium self-start sm:self-auto"
+              >
+                <RotateCcw className="w-3.5 h-3.5" /> Reset Filters
+              </button>
             )}
-          </nav>
-          <div className="text-[11px] uppercase tracking-[0.22em] text-[#D8B47A] font-semibold mb-1">
-            COMPLETE CATALOGUE
           </div>
-          <h1 className="font-serif-luxury text-3xl sm:text-4xl lg:text-5xl font-normal text-white">
-            Shop All Jewellery
-          </h1>
-          <p className="text-xs sm:text-sm text-[#BFB5A7] mt-1.5 font-light">
-            Certified 22K/24K hallmarked gold creations, natural conflict-free solitaires, and royal bridal heirlooms.
+          <p className="text-xs sm:text-sm text-[#BFB5A7] mt-1.5 font-light max-w-2xl">
+            {getCategoryDescription(selectedCategory)}
           </p>
         </div>
 
@@ -150,22 +219,27 @@ export const ShopPage: React.FC = () => {
             )}
           </div>
 
-          {/* Quick Categories Bar on Desktop */}
-          <div className="hidden xl:flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
-            {categories.slice(0, 6).map((cat) => (
+          {/* Quick Filter Pills inspired by reference screenshot */}
+          <div className="hidden xl:flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+            <span className="text-[11px] text-gray-500 font-medium whitespace-nowrap">Quick Filter:</span>
+            {[
+              { label: 'Under ₹50K', action: () => handleSelectCategory('Under ₹50K'), active: selectedCategory === 'Under ₹50K' },
+              { label: '22K Gold', action: () => { setSelectedPurity('22K'); handleSelectCategory('Gold'); }, active: selectedCategory === 'Gold' && selectedPurity === '22K' },
+              { label: 'Diamonds', action: () => handleSelectCategory('Diamonds'), active: selectedCategory === 'Diamonds' },
+              { label: 'Wedding', action: () => handleSelectCategory('Wedding'), active: selectedCategory === 'Wedding' },
+              { label: 'Daily Wear', action: () => handleSelectCategory('Daily Wear'), active: selectedCategory === 'Daily Wear' },
+            ].map((pill) => (
               <button
-                key={cat}
-                onClick={() => {
-                  setSelectedCategory(cat);
-                  setSearchParams(cat === 'All' ? {} : { category: cat });
-                }}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
-                  selectedCategory === cat
+                key={pill.label}
+                onClick={pill.action}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1 ${
+                  pill.active
                     ? 'bg-[#D8B47A] text-[#090806] font-semibold shadow-sm'
-                    : 'bg-[#18140F] text-gray-400 hover:text-white border border-[#282118]'
+                    : 'bg-[#18140F] text-gray-400 hover:text-white border border-[#282118] hover:border-[#D8B47A]/40'
                 }`}
               >
-                {cat}
+                <span>+</span>
+                <span>{pill.label}</span>
               </button>
             ))}
           </div>
@@ -203,15 +277,12 @@ export const ShopPage: React.FC = () => {
           <div className="flex flex-wrap items-center gap-2 mb-6 text-xs text-gray-300 text-left">
             <span className="text-gray-500 font-medium">Applied Filters:</span>
             
-            {selectedCategory !== 'All' && (
+            {selectedCategory !== 'All' && selectedCategory !== 'All Jewellery' && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#18140F] border border-[#D8B47A]/40 text-[#D8B47A]">
                 Category: <strong className="text-white">{selectedCategory}</strong>
                 <X 
                   className="w-3 h-3 cursor-pointer hover:text-white ml-0.5" 
-                  onClick={() => {
-                    setSelectedCategory('All');
-                    setSearchParams({});
-                  }} 
+                  onClick={() => handleSelectCategory('All Jewellery')} 
                 />
               </span>
             )}
@@ -246,12 +317,12 @@ export const ShopPage: React.FC = () => {
               </span>
             )}
 
-            {maxPrice < 600000 && (
+            {maxPrice < 1000000 && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#18140F] border border-[#D8B47A]/40 text-[#D8B47A]">
                 Under <strong className="text-white">{formatINR(maxPrice)}</strong>
                 <X 
                   className="w-3 h-3 cursor-pointer hover:text-white ml-0.5" 
-                  onClick={() => setMaxPrice(600000)} 
+                  onClick={() => setMaxPrice(1000000)} 
                 />
               </span>
             )}
@@ -285,29 +356,59 @@ export const ShopPage: React.FC = () => {
               )}
             </div>
 
-            {/* Category Filter */}
+            {/* Main Categories Section in Sidebar */}
             <div>
               <h4 className="text-xs uppercase font-semibold text-gray-300 mb-2.5">
-                Category
+                Main Categories
               </h4>
               <div className="space-y-1">
-                {categories.map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => {
-                      setSelectedCategory(cat);
-                      setSearchParams(cat === 'All' ? {} : { category: cat });
-                    }}
-                    className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs transition-colors flex justify-between items-center ${
-                      selectedCategory === cat
-                        ? 'bg-[#D8B47A]/15 text-[#D8B47A] font-semibold'
-                        : 'text-gray-400 hover:text-white hover:bg-[#18140F]'
-                    }`}
-                  >
-                    <span>{cat}</span>
-                    {selectedCategory === cat && <span className="text-[10px]">●</span>}
-                  </button>
-                ))}
+                {mainCategoriesList.map((cat) => {
+                  const isActive = 
+                    (cat === 'All Jewellery' && (selectedCategory === 'All' || selectedCategory === 'All Jewellery')) ||
+                    selectedCategory.toLowerCase() === cat.toLowerCase();
+
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => handleSelectCategory(cat)}
+                      className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs transition-colors flex justify-between items-center ${
+                        isActive
+                          ? 'bg-[#D8B47A]/15 text-[#D8B47A] font-semibold border-l-2 border-[#D8B47A]'
+                          : 'text-gray-400 hover:text-white hover:bg-[#18140F]'
+                      }`}
+                    >
+                      <span>{cat}</span>
+                      {isActive && <span className="text-[10px] text-[#D8B47A]">●</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Silhouette Sub-Categories */}
+            <div className="pt-4 border-t border-[#241F18]">
+              <h4 className="text-xs uppercase font-semibold text-gray-300 mb-2.5">
+                By Jewellery Type
+              </h4>
+              <div className="space-y-1">
+                {silhouetteCategories.map((cat) => {
+                  const isActive = selectedCategory.toLowerCase() === cat.toLowerCase();
+
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => handleSelectCategory(cat)}
+                      className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs transition-colors flex justify-between items-center ${
+                        isActive
+                          ? 'bg-[#D8B47A]/15 text-[#D8B47A] font-semibold border-l-2 border-[#D8B47A]'
+                          : 'text-gray-400 hover:text-white hover:bg-[#18140F]'
+                      }`}
+                    >
+                      <span>{cat}</span>
+                      {isActive && <span className="text-[10px] text-[#D8B47A]">●</span>}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -341,16 +442,16 @@ export const ShopPage: React.FC = () => {
               </div>
               <input
                 type="range"
-                min="50000"
-                max="600000"
+                min="25000"
+                max="1000000"
                 step="10000"
                 value={maxPrice}
                 onChange={(e) => setMaxPrice(parseInt(e.target.value))}
                 className="w-full accent-[#D8B47A] bg-[#2C2720] rounded h-1.5 cursor-pointer"
               />
               <div className="flex justify-between text-[10px] text-gray-500 mt-1">
-                <span>₹50K</span>
-                <span>₹6.0 Lakh+</span>
+                <span>₹25K</span>
+                <span>₹10.0 Lakh+</span>
               </div>
             </div>
 
@@ -398,20 +499,36 @@ export const ShopPage: React.FC = () => {
             {filteredProducts.length === 0 ? (
               <div className="py-20 text-center bg-[#120F0B] border border-[#241F18] rounded-2xl p-8">
                 <div className="w-16 h-16 rounded-full bg-[#18140F] border border-[#2C2720] text-[#D8B47A] flex items-center justify-center mx-auto mb-4">
-                  <Search className="w-8 h-8" />
+                  <Search className="w-8 h-8 stroke-[1.5]" />
                 </div>
                 <h3 className="font-serif-luxury text-2xl font-normal text-white mb-2">
-                  No matching jewellery pieces found
+                  No {selectedCategory !== 'All' && selectedCategory !== 'All Jewellery' ? selectedCategory : ''} jewellery found
                 </h3>
-                <p className="text-xs text-gray-400 max-w-md mx-auto mb-6 font-light">
-                  No products matched your exact filter combination ({selectedCategory !== 'All' ? selectedCategory : 'all categories'} under {formatINR(maxPrice)}). Try clearing filters to see all available pieces.
+                <p className="text-xs text-gray-400 max-w-md mx-auto mb-6 font-light leading-relaxed">
+                  No creations matched your active criteria ({selectedCategory} under {formatINR(maxPrice)}{searchQuery ? ` with search "${searchQuery}"` : ''}).
+                  Try adjusting your filters or browse our complete royal catalogue.
                 </p>
-                <button
-                  onClick={resetFilters}
-                  className="px-6 py-2.5 rounded-full bg-[#D8B47A] text-[#090806] text-xs font-semibold uppercase tracking-wider hover:bg-[#EBD5A8] transition-colors"
-                >
-                  Reset All Filters
-                </button>
+                <div className="flex items-center justify-center gap-3 flex-wrap">
+                  <button
+                    onClick={resetFilters}
+                    className="px-6 py-2.5 rounded-full bg-[#D8B47A] hover:bg-[#EBD5A8] text-[#090806] text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
+                  >
+                    View All Jewellery
+                  </button>
+                  {hasActiveFilters && (
+                    <button
+                      onClick={() => {
+                        setMaxPrice(600000);
+                        setSelectedPurity('All');
+                        setSelectedStyle('All');
+                        setSearchQuery('');
+                      }}
+                      className="px-6 py-2.5 rounded-full bg-[#18140F] hover:bg-[#201B14] text-white border border-[#2C2720] text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
+                    >
+                      Clear Sub-Filters Only
+                    </button>
+                  )}
+                </div>
               </div>
             ) : (
               /* Product Cards Grid */
@@ -447,26 +564,59 @@ export const ShopPage: React.FC = () => {
                 </button>
               </div>
 
-              {/* Categories */}
+              {/* Main 7 Categories */}
               <div className="mb-6">
-                <h4 className="text-xs uppercase font-semibold text-[#D8B47A] mb-3">Category</h4>
+                <h4 className="text-xs uppercase font-semibold text-[#D8B47A] mb-3">Main Categories</h4>
                 <div className="grid grid-cols-2 gap-2">
-                  {categories.map((cat) => (
-                    <button
-                      key={cat}
-                      onClick={() => {
-                        setSelectedCategory(cat);
-                        setSearchParams(cat === 'All' ? {} : { category: cat });
-                      }}
-                      className={`p-2 text-xs rounded-lg border text-left truncate transition-colors ${
-                        selectedCategory === cat
-                          ? 'bg-[#D8B47A] text-[#090806] font-bold border-[#D8B47A]'
-                          : 'bg-[#18140F] text-gray-300 border-[#241F18]'
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
+                  {mainCategoriesList.map((cat) => {
+                    const isActive = 
+                      (cat === 'All Jewellery' && (selectedCategory === 'All' || selectedCategory === 'All Jewellery')) ||
+                      selectedCategory.toLowerCase() === cat.toLowerCase();
+
+                    return (
+                      <button
+                        key={cat}
+                        onClick={() => {
+                          handleSelectCategory(cat);
+                          setMobileFilterOpen(false);
+                        }}
+                        className={`p-2 text-xs rounded-lg border text-left truncate transition-colors ${
+                          isActive
+                            ? 'bg-[#D8B47A] text-[#090806] font-bold border-[#D8B47A]'
+                            : 'bg-[#18140F] text-gray-300 border-[#241F18]'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Silhouettes */}
+              <div className="mb-6">
+                <h4 className="text-xs uppercase font-semibold text-[#D8B47A] mb-3">By Silhouette</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {silhouetteCategories.map((cat) => {
+                    const isActive = selectedCategory.toLowerCase() === cat.toLowerCase();
+
+                    return (
+                      <button
+                        key={cat}
+                        onClick={() => {
+                          handleSelectCategory(cat);
+                          setMobileFilterOpen(false);
+                        }}
+                        className={`p-2 text-xs rounded-lg border text-left truncate transition-colors ${
+                          isActive
+                            ? 'bg-[#D8B47A] text-[#090806] font-bold border-[#D8B47A]'
+                            : 'bg-[#18140F] text-gray-300 border-[#241F18]'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -498,13 +648,17 @@ export const ShopPage: React.FC = () => {
                 </div>
                 <input
                   type="range"
-                  min="50000"
-                  max="600000"
+                  min="25000"
+                  max="1000000"
                   step="10000"
                   value={maxPrice}
                   onChange={(e) => setMaxPrice(parseInt(e.target.value))}
                   className="w-full accent-[#D8B47A] bg-[#2C2720] rounded h-1.5"
                 />
+                <div className="flex justify-between text-[10px] text-gray-500 mt-1">
+                  <span>₹25K</span>
+                  <span>₹10.0 Lakh+</span>
+                </div>
               </div>
             </div>
 

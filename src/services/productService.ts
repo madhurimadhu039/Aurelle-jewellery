@@ -10,7 +10,7 @@ import { db, isFirebaseConfigured } from '../lib/firebase';
 import { Product } from '../types';
 import { MOCK_PRODUCTS } from '../data/mockData';
 
-const PRODUCTS_STORAGE_KEY = 'aurelle_products_db';
+const PRODUCTS_STORAGE_KEY = 'aurelle_products_db_v7';
 
 type ProductListener = (products: Product[]) => void;
 const listeners: Set<ProductListener> = new Set();
@@ -47,11 +47,33 @@ export const productService = {
       localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(products));
     }
 
-    // Ensure product images are distinct and not colliding with collection images
     let hasUpdatedImages = false;
+
+    // Ensure all default catalogue products are present in cache and synced with latest definitions
+    MOCK_PRODUCTS.forEach((mp) => {
+      const idx = products.findIndex((p) => p.id === mp.id);
+      if (idx === -1) {
+        products.push(mp);
+        hasUpdatedImages = true;
+      } else {
+        const current = products[idx];
+        if (
+          current.name !== mp.name ||
+          current.images?.[0] !== mp.images?.[0] ||
+          current.weightGrams !== mp.weightGrams ||
+          current.price !== mp.price ||
+          current.category !== mp.category ||
+          current.material !== mp.material
+        ) {
+          products[idx] = { ...current, ...mp };
+          hasUpdatedImages = true;
+        }
+      }
+    });
+
+    // Ensure product images are distinct and not colliding with collection images
     products = products.map((p) => {
       const isPublished = p.isPublished !== false; // Default true
-      const defaultMatch = MOCK_PRODUCTS.find((mp) => mp.id === p.id);
 
       // Auto-heal bracelet images to distinct project assets
       if (p.id === 'aur-004' || p.category === 'Bracelets') {
@@ -68,25 +90,6 @@ export const productService = {
         }
       }
 
-      // Check if product is still using old collection duplicate images
-      if (defaultMatch && p.images && p.images.length > 0) {
-        const isOldDuplicate =
-          (p.id === 'aur-001' && p.images[0].includes('photo-1605100804763')) ||
-          (p.id === 'aur-002' && p.images[0].includes('photo-1599643478518')) ||
-          (p.id === 'aur-003' && p.images[0].includes('photo-1630019852942')) ||
-          (p.id === 'aur-005' && p.images[0].includes('photo-1598560917505')) ||
-          (p.id === 'aur-006' && p.images[0].includes('photo-1515562141207'));
-
-        if (isOldDuplicate) {
-          hasUpdatedImages = true;
-          return {
-            ...p,
-            isPublished,
-            images: defaultMatch.images,
-          };
-        }
-      }
-
       return { ...p, isPublished };
     });
 
@@ -99,10 +102,10 @@ export const productService = {
     }
 
     if (!includeUnpublished) {
-      return products.filter((p) => p.isPublished !== false);
+      return products.filter((p) => p.isPublished !== false && p.id && p.id.startsWith('aur-'));
     }
 
-    return products;
+    return products.filter((p) => p.id && p.id.startsWith('aur-'));
   },
 
   getById(id: string): Product | undefined {
@@ -219,13 +222,75 @@ export const productService = {
   }): Product[] {
     let result = productService.getAll(false);
 
-    if (filters.category && filters.category !== 'All') {
-      if (filters.category === 'New Arrivals') {
+    if (filters.category && filters.category !== 'All' && filters.category !== 'All Jewellery') {
+      const cat = filters.category.trim();
+      const catLower = cat.toLowerCase();
+
+      if (cat === 'New Arrivals') {
         result = result.filter((p) => p.isNewArrival);
-      } else if (filters.category === 'Bridal Jewellery') {
-        result = result.filter((p) => p.isBridal);
+      } else if (catLower === 'wedding' || cat === 'Bridal Jewellery') {
+        // Distinct heavy royal bridal wedding ornaments only
+        result = result.filter(
+          (p) =>
+            p.category === 'Bridal Jewellery' ||
+            p.isBridal === true ||
+            p.name.toLowerCase().includes('bridal') ||
+            p.name.toLowerCase().includes('rani haar') ||
+            p.name.toLowerCase().includes('kamarbandh') ||
+            p.name.toLowerCase().includes('matha patti')
+        );
+      } else if (catLower === 'gold') {
+        // Pure traditional solid gold creations (necklaces, chains, bangles, bracelets, rings, bullion)
+        // Strictly exclude bridal sets and any diamond/white gold items
+        result = result.filter(
+          (p) =>
+            p.category !== 'Bridal Jewellery' &&
+            !p.isBridal &&
+            (p.purity === '24K' || p.purity === '22K') &&
+            (p.material.toLowerCase().includes('solid') || p.material.toLowerCase().includes('gold') || p.material.toLowerCase().includes('bullion')) &&
+            !p.name.toLowerCase().includes('solitaire') &&
+            !p.name.toLowerCase().includes('diamond') &&
+            !p.material.toLowerCase().includes('diamond') &&
+            !p.material.toLowerCase().includes('white gold') &&
+            (!p.diamondCarat || p.diamondCarat === 0)
+        );
+      } else if (catLower === 'diamonds' || catLower === 'diamond') {
+        // Distinct certified natural diamond & solitaire creations (necklaces, pendants, earrings, rings, bracelets)
+        // Strictly exclude pure gold and bridal sets
+        result = result.filter(
+          (p) =>
+            p.category !== 'Bridal Jewellery' &&
+            !p.isBridal &&
+            ((p.diamondCarat && p.diamondCarat > 0) ||
+              p.material.toLowerCase().includes('diamond') ||
+              p.name.toLowerCase().includes('diamond') ||
+              p.name.toLowerCase().includes('solitaire'))
+        );
+      } else if (catLower === 'daily wear' || catLower === 'dailywear') {
+        // Lightweight everyday luxury (under 10g and under ₹90,000)
+        result = result.filter(
+          (p) =>
+            !p.isBridal &&
+            p.category !== 'Bridal Jewellery' &&
+            (p.weightGrams && p.weightGrams <= 10) &&
+            p.price <= 90000 &&
+            (p.occasion && p.occasion.some((occ) => /daily|everyday|office/i.test(occ)))
+        );
+      } else if (catLower === 'earrings') {
+        // Earrings only
+        result = result.filter(
+          (p) =>
+            p.category === 'Earrings' ||
+            p.name.toLowerCase().includes('earring') ||
+            p.name.toLowerCase().includes('chandbali') ||
+            p.name.toLowerCase().includes('stud') ||
+            p.name.toLowerCase().includes('jhumka')
+        );
+      } else if (catLower === 'under ₹50k' || catLower === 'under 50k' || catLower.includes('50k')) {
+        // Only products whose actual prices are below ₹50,000
+        result = result.filter((p) => p.price < 50000 && p.id && p.id.startsWith('aur-'));
       } else {
-        result = result.filter((p) => p.category.toLowerCase().includes(filters.category!.toLowerCase()));
+        result = result.filter((p) => p.category.toLowerCase().includes(catLower));
       }
     }
 
