@@ -28,6 +28,7 @@ export const HomePage: React.FC = () => {
   const [heroSlide, setHeroSlide] = useState(0);
   const [payDueQuery, setPayDueQuery] = useState('');
   const [tryOnProduct, setTryOnProduct] = useState<Product | null>(null);
+  const [collectionScrollIndex, setCollectionScrollIndex] = useState(0);
 
   // Pay Due & Verified Record Modal State
   const [statusModalOpen, setStatusModalOpen] = useState(false);
@@ -96,7 +97,28 @@ export const HomePage: React.FC = () => {
     return () => clearInterval(timer);
   }, [heroSlides.length]);
 
-  // Our Collections Section (5 items matching reference)
+  // Helper to scroll collections carousel via left/right arrows
+  const scrollCollections = (direction: 'left' | 'right') => {
+    const el = document.getElementById('collections-carousel');
+    if (!el) return;
+    const scrollAmount = Math.max(260, el.clientWidth * 0.75);
+    el.scrollBy({
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      behavior: 'smooth',
+    });
+  };
+
+  const handleCollectionScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const maxScroll = target.scrollWidth - target.clientWidth;
+    if (maxScroll <= 0) return;
+    const progress = target.scrollLeft / maxScroll;
+    if (progress < 0.33) setCollectionScrollIndex(0);
+    else if (progress < 0.66) setCollectionScrollIndex(1);
+    else setCollectionScrollIndex(2);
+  };
+
+  // Our Collections Section (10 curated luxury categories matching reference and expanding catalog)
   const collections = [
     {
       name: 'Rings',
@@ -123,15 +145,42 @@ export const HomePage: React.FC = () => {
       link: '/shop?category=Bangles',
       image: 'https://images.unsplash.com/photo-1598560917505-59a3ad559071?auto=format&fit=crop&w=600&q=80',
     },
+    {
+      name: 'Pendants',
+      link: '/shop?category=Pendants',
+      image: 'https://images.unsplash.com/photo-1599643477877-530eb83abc8e?auto=format&fit=crop&w=600&q=80',
+    },
+    {
+      name: 'Mangalsutras',
+      link: '/shop?category=Mangalsutras',
+      image: 'https://images.unsplash.com/photo-1601121141461-9d6647bca1ed?auto=format&fit=crop&w=600&q=80',
+    },
+    {
+      name: 'Bridal Jewellery',
+      link: '/shop?category=Bridal+Jewellery',
+      image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=600&q=80',
+    },
+    {
+      name: 'Solitaires',
+      link: '/shop?category=Rings',
+      image: 'https://images.unsplash.com/photo-1603561591411-07134e71a2a9?auto=format&fit=crop&w=600&q=80',
+    },
+    {
+      name: 'Gold Coins & Bullion',
+      link: '/shop?purity=24K',
+      image: 'https://images.unsplash.com/photo-1610375461246-83df859d849d?auto=format&fit=crop&w=600&q=80',
+    },
   ];
 
-  // Featured Products matching the 4 reference pieces
-  const featured = [
-    products.find((p) => p.name.includes('Royal Solitaire')) || products[0],
-    products.find((p) => p.name.includes('Eternal Diamond Necklace')) || products[1],
-    products.find((p) => p.name.includes('Golden Heritage Earrings')) || products[2],
-    products.find((p) => p.name.includes('Graceful')) || products[3],
-  ];
+  // Featured Products matching all published pieces
+  const featured = products.filter((p) => p.isPublished !== false).length >= 4
+    ? products.filter((p) => p.isPublished !== false)
+    : [
+        products.find((p) => p.name.includes('Royal Solitaire')) || products[0],
+        products.find((p) => p.name.includes('Eternal Diamond Necklace')) || products[1],
+        products.find((p) => p.name.includes('Golden Heritage Earrings')) || products[2],
+        products.find((p) => p.name.includes('Graceful')) || products[3],
+      ];
 
   const handlePayDueSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -290,47 +339,43 @@ export const HomePage: React.FC = () => {
             </Link>
           </div>
 
-          {/* 5 Collections Cards Row */}
-          <div className="relative">
+          {/* Collections Carousel with Functional Side Arrows */}
+          <div className="relative group/collections">
             {/* Left Carousel Arrow */}
             <button
-              onClick={() => {
-                const el = document.getElementById('collections-carousel');
-                if (el) el.scrollBy({ left: -260, behavior: 'smooth' });
-              }}
-              className="hidden lg:flex absolute -left-5 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white/90 shadow-md text-gray-700 hover:text-black items-center justify-center transition-all"
+              onClick={() => scrollCollections('left')}
+              className="flex absolute -left-3 sm:-left-5 top-1/2 -translate-y-1/2 z-20 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/95 hover:bg-white shadow-[0_4px_14px_rgba(0,0,0,0.18)] text-[#090806] hover:text-[#9E7A3E] items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 border border-[#E7DFD5] cursor-pointer"
               aria-label="Scroll left"
             >
-              <ChevronLeft className="w-5 h-5 stroke-[1.5]" />
+              <ChevronLeft className="w-5 h-5 stroke-[2]" />
             </button>
 
             {/* Right Carousel Arrow */}
             <button
-              onClick={() => {
-                const el = document.getElementById('collections-carousel');
-                if (el) el.scrollBy({ left: 260, behavior: 'smooth' });
-              }}
-              className="hidden lg:flex absolute -right-5 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white/90 shadow-md text-gray-700 hover:text-black items-center justify-center transition-all"
+              onClick={() => scrollCollections('right')}
+              className="flex absolute -right-3 sm:-right-5 top-1/2 -translate-y-1/2 z-20 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/95 hover:bg-white shadow-[0_4px_14px_rgba(0,0,0,0.18)] text-[#090806] hover:text-[#9E7A3E] items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 border border-[#E7DFD5] cursor-pointer"
               aria-label="Scroll right"
             >
-              <ChevronRight className="w-5 h-5 stroke-[1.5]" />
+              <ChevronRight className="w-5 h-5 stroke-[2]" />
             </button>
 
-            {/* Scrollable Container (5 visible on desktop) */}
+            {/* Scrollable Container (5 visible on desktop, horizontal scrolling to reveal more) */}
             <div
               id="collections-carousel"
-              className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 overflow-x-auto no-scrollbar scroll-smooth"
+              onScroll={handleCollectionScroll}
+              className="flex gap-3 sm:gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory py-1"
             >
               {collections.map((col) => (
                 <Link
                   key={col.name}
                   to={col.link}
-                  className="group relative rounded-lg overflow-hidden aspect-[3/4] bg-[#110E0B] shadow-sm hover:shadow-xl transition-all duration-300 block"
+                  className="flex-none w-[calc(50%-6px)] sm:w-[calc(33.333%-11px)] lg:w-[calc(20%-13px)] snap-start group relative rounded-lg overflow-hidden aspect-[3/4] bg-[#110E0B] shadow-sm hover:shadow-xl transition-all duration-300 block"
                 >
                   {/* Photo with subtle dark tone */}
                   <img
                     src={col.image}
                     alt={col.name}
+                    loading="lazy"
                     className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-108"
                   />
                   {/* Subtle dark gradient overlay for text readability */}
@@ -349,11 +394,28 @@ export const HomePage: React.FC = () => {
               ))}
             </div>
 
-            {/* Small Pagination Indicators below */}
-            <div className="flex justify-center items-center gap-1.5 mt-5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#D8B47A]" />
-              <span className="w-1.5 h-1.5 rounded-full bg-[#D1C7BA]" />
-              <span className="w-1.5 h-1.5 rounded-full bg-[#D1C7BA]" />
+            {/* Interactive Pagination Indicators below */}
+            <div className="flex justify-center items-center gap-2 mt-5">
+              {[0, 1, 2].map((idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    const el = document.getElementById('collections-carousel');
+                    if (!el) return;
+                    const maxScroll = el.scrollWidth - el.clientWidth;
+                    el.scrollTo({
+                      left: (maxScroll / 2) * idx,
+                      behavior: 'smooth',
+                    });
+                  }}
+                  className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                    collectionScrollIndex === idx
+                      ? 'w-6 bg-[#9E7A3E]'
+                      : 'w-1.5 bg-[#D1C7BA] hover:bg-[#A89E90]'
+                  }`}
+                  aria-label={`Go to slide ${idx + 1}`}
+                />
+              ))}
             </div>
           </div>
 
@@ -516,42 +578,48 @@ export const HomePage: React.FC = () => {
             </Link>
           </div>
 
-          {/* 4 Products Row */}
+          {/* Products Carousel */}
           <div className="relative">
             {/* Left Carousel Arrow */}
             <button
               onClick={() => {
                 const el = document.getElementById('featured-carousel');
-                if (el) el.scrollBy({ left: -300, behavior: 'smooth' });
+                if (el) {
+                  const scrollAmount = Math.max(280, el.clientWidth * 0.75);
+                  el.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+                }
               }}
-              className="hidden lg:flex absolute -left-5 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white/90 shadow-md text-gray-700 hover:text-black items-center justify-center transition-all"
+              className="flex absolute -left-3 sm:-left-5 top-1/2 -translate-y-1/2 z-20 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/95 hover:bg-white shadow-[0_4px_14px_rgba(0,0,0,0.18)] text-[#090806] hover:text-[#9E7A3E] items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 border border-[#E7DFD5] cursor-pointer"
               aria-label="Previous Products"
             >
-              <ChevronLeft className="w-5 h-5 stroke-[1.5]" />
+              <ChevronLeft className="w-5 h-5 stroke-[2]" />
             </button>
 
             {/* Right Carousel Arrow */}
             <button
               onClick={() => {
                 const el = document.getElementById('featured-carousel');
-                if (el) el.scrollBy({ left: 300, behavior: 'smooth' });
+                if (el) {
+                  const scrollAmount = Math.max(280, el.clientWidth * 0.75);
+                  el.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+                }
               }}
-              className="hidden lg:flex absolute -right-5 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white/90 shadow-md text-gray-700 hover:text-black items-center justify-center transition-all"
+              className="flex absolute -right-3 sm:-right-5 top-1/2 -translate-y-1/2 z-20 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/95 hover:bg-white shadow-[0_4px_14px_rgba(0,0,0,0.18)] text-[#090806] hover:text-[#9E7A3E] items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 border border-[#E7DFD5] cursor-pointer"
               aria-label="Next Products"
             >
-              <ChevronRight className="w-5 h-5 stroke-[1.5]" />
+              <ChevronRight className="w-5 h-5 stroke-[2]" />
             </button>
 
             <div
               id="featured-carousel"
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth"
+              className="flex gap-4 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory py-2"
             >
               {featured.map((prod) => {
                 const wishlisted = isInWishlist(prod.id);
                 return (
                   <div
                     key={prod.id}
-                    className="group bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
+                    className="flex-none w-[260px] sm:w-[calc(50%-12px)] lg:w-[calc(25%-18px)] snap-start group bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
                   >
                     {/* Top Image Container with dark moody jewellery photography */}
                     <div className="relative aspect-square bg-[#0C0A08] overflow-hidden">

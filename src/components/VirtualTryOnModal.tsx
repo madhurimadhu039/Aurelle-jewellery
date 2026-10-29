@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Camera, RefreshCw, ZoomIn, ZoomOut, RotateCw, ShoppingBag, Sparkles, Check } from 'lucide-react';
+import { X, Camera, ShoppingBag, Sparkles, Check } from 'lucide-react';
 import { Product } from '../types';
 import { useApp } from '../contexts/AppContext';
 
@@ -10,9 +10,6 @@ interface Props {
 
 export const VirtualTryOnModal: React.FC<Props> = ({ product, onClose }) => {
   const { addToCart, formatINR } = useApp();
-  const [scale, setScale] = useState(1);
-  const [rotation, setRotation] = useState(0);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
   const [selectedModel, setSelectedModel] = useState<'portrait' | 'neck' | 'hand'>('portrait');
   const [added, setAdded] = useState(false);
 
@@ -80,55 +77,15 @@ export const VirtualTryOnModal: React.FC<Props> = ({ product, onClose }) => {
               className="w-full h-full object-cover opacity-90 transition-all duration-500"
             />
 
-            {/* Simulated Jewellery Overlay Item */}
-            {product && (
-              <div
-                style={{
-                  transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
-                  transition: 'transform 0.08s ease-out',
-                }}
-                className="absolute cursor-move drop-shadow-[0_15px_25px_rgba(0,0,0,0.9)]"
-                onMouseDown={(e) => {
-                  const startX = e.clientX - position.x;
-                  const startY = e.clientY - position.y;
-                  const onMouseMove = (moveEvent: MouseEvent) => {
-                    setPosition({
-                      x: moveEvent.clientX - startX,
-                      y: moveEvent.clientY - startY,
-                    });
-                  };
-                  const onMouseUp = () => {
-                    window.removeEventListener('mousemove', onMouseMove);
-                    window.removeEventListener('mouseup', onMouseUp);
-                  };
-                  window.addEventListener('mousemove', onMouseMove);
-                  window.addEventListener('mouseup', onMouseUp);
-                }}
-              >
-                <img
-                  src={product.images[0]}
-                  alt={product.name}
-                  className="w-32 h-32 object-contain pointer-events-none filter brightness-110 contrast-105"
-                />
-              </div>
-            )}
-
             {/* Instruction Overlay */}
             <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center bg-[#090806]/85 backdrop-blur-md px-4 py-2 rounded-xl border border-[#2C2720] text-xs text-gray-300">
               <span className="flex items-center gap-1.5">
                 <Camera className="w-3.5 h-3.5 text-[#D8B47A]" />
-                Drag jewellery piece to position onto model
+                Virtual fitting mannequin preview
               </span>
-              <button
-                onClick={() => {
-                  setScale(1);
-                  setRotation(0);
-                  setPosition({ x: 0, y: 0 });
-                }}
-                className="text-[#D8B47A] hover:underline flex items-center gap-1"
-              >
-                <RefreshCw className="w-3 h-3" /> Reset
-              </button>
+              <span className="text-[#D8B47A] font-medium flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5" /> High-Fashion Studio
+              </span>
             </div>
           </div>
 
@@ -189,46 +146,6 @@ export const VirtualTryOnModal: React.FC<Props> = ({ product, onClose }) => {
                 </div>
               </div>
 
-              {/* Adjustments: Scale & Rotation */}
-              <div className="space-y-3">
-                <div>
-                  <div className="flex justify-between text-xs text-gray-400 mb-1">
-                    <span>Jewellery Scale:</span>
-                    <span className="text-[#D8B47A] font-bold">{Math.round(scale * 100)}%</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <ZoomOut className="w-4 h-4 text-gray-500" />
-                    <input
-                      type="range"
-                      min="0.5"
-                      max="2"
-                      step="0.05"
-                      value={scale}
-                      onChange={(e) => setScale(parseFloat(e.target.value))}
-                      className="w-full accent-[#D8B47A] bg-[#2C2720] rounded-lg h-1.5"
-                    />
-                    <ZoomIn className="w-4 h-4 text-gray-500" />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-xs text-gray-400 mb-1">
-                    <span>Angle / Rotation:</span>
-                    <span className="text-[#D8B47A] font-bold">{rotation}°</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <RotateCw className="w-4 h-4 text-gray-500" />
-                    <input
-                      type="range"
-                      min="-90"
-                      max="90"
-                      value={rotation}
-                      onChange={(e) => setRotation(parseInt(e.target.value))}
-                      className="w-full accent-[#D8B47A] bg-[#2C2720] rounded-lg h-1.5"
-                    />
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* Bottom Actions */}

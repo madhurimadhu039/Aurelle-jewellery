@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Camera, Sparkles, ZoomIn, ZoomOut, RotateCw, RefreshCw, ShoppingBag, Check } from 'lucide-react';
+import { Camera, Sparkles, ShoppingBag, Check } from 'lucide-react';
 import { productService } from '../services/productService';
 import { Product } from '../types';
 import { useApp } from '../contexts/AppContext';
@@ -9,9 +9,6 @@ export const TryOnPage: React.FC = () => {
   const products = productService.getAll();
   const [selectedProduct, setSelectedProduct] = useState<Product>(products[0]);
   const [selectedModel, setSelectedModel] = useState<'portrait' | 'neck' | 'hand'>('portrait');
-  const [scale, setScale] = useState(1);
-  const [rotation, setRotation] = useState(0);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
   const [added, setAdded] = useState(false);
 
   const modelImages = {
@@ -51,53 +48,15 @@ export const TryOnPage: React.FC = () => {
               className="w-full h-full object-cover opacity-90"
             />
 
-            {/* Draggable Jewellery Overlay */}
-            <div
-              style={{
-                transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
-                transition: 'transform 0.05s ease-out',
-              }}
-              className="absolute cursor-move drop-shadow-[0_20px_35px_rgba(0,0,0,0.95)]"
-              onMouseDown={(e) => {
-                const startX = e.clientX - position.x;
-                const startY = e.clientY - position.y;
-                const onMouseMove = (moveEvent: MouseEvent) => {
-                  setPosition({
-                    x: moveEvent.clientX - startX,
-                    y: moveEvent.clientY - startY,
-                  });
-                };
-                const onMouseUp = () => {
-                  window.removeEventListener('mousemove', onMouseMove);
-                  window.removeEventListener('mouseup', onMouseUp);
-                };
-                window.addEventListener('mousemove', onMouseMove);
-                window.addEventListener('mouseup', onMouseUp);
-              }}
-            >
-              <img
-                src={selectedProduct.images[0]}
-                alt={selectedProduct.name}
-                className="w-40 h-40 object-contain pointer-events-none filter brightness-110 contrast-105"
-              />
-            </div>
-
             {/* Control Bar Overlay */}
             <div className="absolute bottom-4 inset-x-4 flex justify-between items-center bg-[#090806]/90 backdrop-blur-md px-4 py-2.5 rounded-xl border border-[#2C2720] text-xs">
               <span className="flex items-center gap-1.5 text-gray-300">
                 <Camera className="w-4 h-4 text-[#D8B47A]" />
-                Drag jewellery directly on model to adjust positioning
+                High-definition jewellery mannequin visualizer
               </span>
-              <button
-                onClick={() => {
-                  setScale(1);
-                  setRotation(0);
-                  setPosition({ x: 0, y: 0 });
-                }}
-                className="text-[#D8B47A] hover:underline flex items-center gap-1 font-semibold"
-              >
-                <RefreshCw className="w-3.5 h-3.5" /> Reset Fitting
-              </button>
+              <span className="text-[#D8B47A] flex items-center gap-1 font-semibold">
+                <Sparkles className="w-3.5 h-3.5" /> Curated Studio Fit
+              </span>
             </div>
           </div>
 
@@ -144,47 +103,6 @@ export const TryOnPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Adjustments */}
-              <div className="space-y-3">
-                <div>
-                  <div className="flex justify-between text-xs text-gray-400 mb-1">
-                    <span>Fitting Scale:</span>
-                    <span className="text-[#D8B47A] font-bold">{Math.round(scale * 100)}%</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <ZoomOut className="w-4 h-4 text-gray-500" />
-                    <input
-                      type="range"
-                      min="0.5"
-                      max="2"
-                      step="0.05"
-                      value={scale}
-                      onChange={(e) => setScale(parseFloat(e.target.value))}
-                      className="w-full accent-[#D8B47A] bg-[#2C2720] rounded h-1.5"
-                    />
-                    <ZoomIn className="w-4 h-4 text-gray-500" />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-xs text-gray-400 mb-1">
-                    <span>Angle & Tilt:</span>
-                    <span className="text-[#D8B47A] font-bold">{rotation}°</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <RotateCw className="w-4 h-4 text-gray-500" />
-                    <input
-                      type="range"
-                      min="-90"
-                      max="90"
-                      value={rotation}
-                      onChange={(e) => setRotation(parseInt(e.target.value))}
-                      className="w-full accent-[#D8B47A] bg-[#2C2720] rounded h-1.5"
-                    />
-                  </div>
-                </div>
-              </div>
-
               {/* Choose Another Jewellery Piece */}
               <div>
                 <label className="text-xs uppercase font-semibold text-gray-400 block mb-2">Switch Jewellery Piece</label>
@@ -192,10 +110,7 @@ export const TryOnPage: React.FC = () => {
                   {products.slice(0, 8).map((p) => (
                     <button
                       key={p.id}
-                      onClick={() => {
-                        setSelectedProduct(p);
-                        setPosition({ x: 0, y: 0 });
-                      }}
+                      onClick={() => setSelectedProduct(p)}
                       className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
                         selectedProduct.id === p.id ? 'border-[#D8B47A] scale-105' : 'border-[#241F18] opacity-70 hover:opacity-100'
                       }`}
