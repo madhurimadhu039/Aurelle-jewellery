@@ -179,12 +179,12 @@ export const HomePage: React.FC = () => {
     {
       name: 'Mangalsutras',
       link: '/shop?category=Mangalsutras',
-      image: 'https://images.unsplash.com/photo-1601121141461-9d6647bca1ed?auto=format&fit=crop&w=600&q=80',
+      image: '/images/collections-mangalsutra.jpg',
     },
     {
       name: 'Bridal Jewellery',
       link: '/shop?category=Bridal+Jewellery',
-      image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=600&q=80',
+      image: '/images/collections-bridal.jpg',
     },
     {
       name: 'Solitaires',

@@ -23,7 +23,7 @@ export const CollectionsPage: React.FC = () => {
       tagline: 'Imperial Royal Heirloom Ensembles',
       description: 'Centuries of royal Rajputana & temple artistry crafted in 22K gold, uncut Polki, and Zambian emeralds for your sacred celebrations.',
       itemCount: '18 Signature Sets',
-      image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=800&q=80',
+      image: '/images/collections-bridal.jpg',
       highlight: 'Bespoke Trousseau',
     },
     {
@@ -77,7 +77,7 @@ export const CollectionsPage: React.FC = () => {
       tagline: 'Contemporary Nuptial Grace',
       description: 'Auspicious traditional black beads seamlessly woven with modern geometric diamond solitaires in 18K yellow gold.',
       itemCount: '14 Designs',
-      image: 'https://images.unsplash.com/photo-1601121141461-9d6647bca1ed?auto=format&fit=crop&w=800&q=80',
+      image: '/images/collections-mangalsutra.jpg',
       highlight: 'Modern Everyday',
     },
     {
