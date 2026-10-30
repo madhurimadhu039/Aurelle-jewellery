@@ -164,7 +164,7 @@ export const HomePage: React.FC = () => {
     {
       name: 'Bracelets',
       link: '/shop?category=Bracelets',
-      image: 'https://images.unsplash.com/photo-1611591475155-c2a92f8809e2?auto=format&fit=crop&w=600&q=80',
+      image: '/images/collections-bracelet.jpg',
     },
     {
       name: 'Bangles',
@@ -400,6 +400,12 @@ export const HomePage: React.FC = () => {
                     src={col.image}
                     alt={col.name}
                     loading="lazy"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      if (!target.src.includes('collections-bracelet.jpg')) {
+                        target.src = '/images/collections-bracelet.jpg';
+                      }
+                    }}
                     className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-108"
                   />
                   {/* Subtle dark gradient overlay for text readability */}
