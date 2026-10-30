@@ -751,35 +751,39 @@ export const MOCK_PRODUCTS: Product[] = [
   },
   {
     "id": "aur-023",
-    "name": "Aurelle 22K Handcrafted Solid Gold Link Chain",
+    "name": "Aurelle 22K Royal Emerald & Solitaire Diamond Collar Necklace",
     "sku": "AUR-NCK-023",
     "category": "Necklaces",
-    "description": "A versatile 22-carat yellow gold chain featuring handcrafted Italian cable link and rope weave interlocking sections with a sturdy barrel safety clasp.",
-    "price": 125000,
-    "originalPrice": 135000,
+    "description": "A magnificent 22-carat yellow gold royal princess collar necklace featuring hand-carved floral filigree lace, brilliant conflict-free diamonds, and pear-cut Colombian emerald teardrops with delicate seed pearl droplets.",
+    "price": 175000,
+    "originalPrice": 195000,
     "images": [
-      "/images/gold-chains-stack.jpg"
+      "/images/royal-emerald-gold-necklace.jpg"
     ],
-    "material": "22K Solid Yellow Gold",
+    "material": "22K Solid Yellow Gold & Natural Emerald",
     "purity": "22K",
-    "weightGrams": 18,
-    "stock": 12,
-    "style": "Modern Minimalist",
+    "weightGrams": 24.5,
+    "diamondCarat": 1.2,
+    "diamondClarity": "VVS1 / E-F Color",
+    "gemstone": "Natural Colombian Emerald & Conflict-Free Diamonds",
+    "stock": 8,
+    "style": "Royal Heritage Collar",
     "occasion": [
-      "Daily Wear",
-      "Festive",
-      "Everyday Luxury"
+      "Royal Wedding",
+      "Festive Gala",
+      "Heirloom Ceremony"
     ],
     "isFeatured": true,
     "isNewArrival": true,
     "isBridal": false,
     "rating": 4.9,
-    "reviewsCount": 34,
-    "dimensions": "Length 20 inches, Width 3.5mm",
+    "reviewsCount": 42,
+    "dimensions": "Collar inner circumference 16 inches, Front drop 45mm",
     "careInstructions": [
-      "Safe for everyday wear; rinse with mild soap"
+      "Store in provided velvet presentation case",
+      "Clean gently using a soft lint-free jewellery cloth"
     ],
-    "certification": "BIS 916 Hallmark"
+    "certification": "BIS 916 Hallmark & IGI Gemstone Certificate"
   },
   {
     "id": "aur-024",
