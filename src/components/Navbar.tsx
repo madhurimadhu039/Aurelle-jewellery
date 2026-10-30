@@ -32,6 +32,7 @@ export const Navbar: React.FC = () => {
     { label: 'Home', path: '/' },
     { label: 'Collections', path: '/collections' },
     { label: 'Shop', path: '/shop' },
+    { label: 'Virtual Try-On', path: '/try-on', badge: 'AI' },
     { label: 'About', path: '/about' },
     { label: 'Services', path: '/services' },
     { label: 'Contact', path: '/contact' },
@@ -69,11 +70,16 @@ export const Navbar: React.FC = () => {
                   <Link
                     key={link.label}
                     to={link.path}
-                    className={`text-[12px] tracking-[0.06em] font-light transition-colors relative py-1 ${
+                    className={`text-[12px] tracking-[0.06em] font-light transition-colors relative py-1 flex items-center gap-1.5 ${
                       active ? 'text-[#F7F1E7]' : 'text-[#BFB5A7] hover:text-[#F7F1E7]'
                     }`}
                   >
-                    {link.label}
+                    <span>{link.label}</span>
+                    {'badge' in link && (link as any).badge && (
+                      <span className="px-1.5 py-0.5 rounded text-[8px] font-bold tracking-wider uppercase bg-[#D8B47A]/20 text-[#D8B47A] border border-[#D8B47A]/40">
+                        {(link as any).badge}
+                      </span>
+                    )}
                     {active && (
                       <span className="absolute bottom-0 left-0 right-0 h-[1.5px] bg-[#D8B47A] rounded-full" />
                     )}
