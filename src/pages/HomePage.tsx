@@ -154,12 +154,12 @@ export const HomePage: React.FC = () => {
     {
       name: 'Necklaces',
       link: '/shop?category=Necklaces',
-      image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=600&q=80',
+      image: '/images/collections-necklace.jpg',
     },
     {
       name: 'Earrings',
       link: '/shop?category=Earrings',
-      image: 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=600&q=80',
+      image: '/images/collections-earrings.jpg',
     },
     {
       name: 'Bracelets',
@@ -169,7 +169,7 @@ export const HomePage: React.FC = () => {
     {
       name: 'Bangles',
       link: '/shop?category=Bangles',
-      image: 'https://images.unsplash.com/photo-1598560917505-59a3ad559071?auto=format&fit=crop&w=600&q=80',
+      image: '/images/collections-bangles.jpg',
     },
     {
       name: 'Pendants',
@@ -345,21 +345,24 @@ export const HomePage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           {/* Header */}
-          <div className="flex items-end justify-between mb-8 text-left">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8 text-left">
             <div>
-              <h2 className="text-[11px] sm:text-xs uppercase font-bold tracking-[0.2em] text-[#090806] block">
+              <span className="text-[11px] sm:text-xs uppercase font-bold tracking-[0.25em] text-[#9E7A3E] block mb-1">
+                HAUTE JOAILLERIE CURATIONS
+              </span>
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif-luxury uppercase font-bold tracking-[0.08em] text-[#090806] block">
                 OUR COLLECTIONS
               </h2>
-              <p className="text-xs sm:text-[13px] text-[#6B6357] font-light mt-0.5">
-                Discover jewellery for every emotion
+              <p className="text-sm sm:text-base text-[#6B6357] font-light mt-1">
+                Discover exquisite jewellery crafted for every emotion and sacred celebration
               </p>
             </div>
             <Link
               to="/shop"
-              className="text-[11px] sm:text-xs font-semibold tracking-wider text-[#090806] hover:text-[#9E7A3E] flex items-center gap-1.5 transition-colors"
+              className="text-xs sm:text-sm font-semibold tracking-wider text-[#090806] hover:text-[#9E7A3E] inline-flex items-center gap-2 transition-colors self-start sm:self-end pb-1 border-b border-[#090806]/30 hover:border-[#9E7A3E]"
             >
               <span>View All</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 
@@ -402,8 +405,8 @@ export const HomePage: React.FC = () => {
                     loading="lazy"
                     onError={(e) => {
                       const target = e.currentTarget;
-                      if (!target.src.includes('collections-bracelet.jpg')) {
-                        target.src = '/images/collections-bracelet.jpg';
+                      if (!target.src.includes('collections-')) {
+                        target.src = '/images/collections-necklace.jpg';
                       }
                     }}
                     className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-108"
@@ -413,10 +416,10 @@ export const HomePage: React.FC = () => {
 
                   {/* Card Label Bottom-Left */}
                   <div className="absolute inset-x-3 bottom-3 text-left">
-                    <h3 className="font-serif-luxury text-base sm:text-lg font-medium text-white group-hover:text-[#D8B47A] transition-colors leading-tight">
+                    <h3 className="font-serif-luxury text-lg sm:text-xl font-medium text-white group-hover:text-[#D8B47A] transition-colors leading-tight">
                       {col.name}
                     </h3>
-                    <span className="text-[10px] sm:text-[11px] text-[#D1C7BA] group-hover:text-white flex items-center gap-1 font-light mt-0.5">
+                    <span className="text-[11px] sm:text-xs text-[#D1C7BA] group-hover:text-white flex items-center gap-1 font-light mt-0.5">
                       Explore Collection <span className="text-xs">→</span>
                     </span>
                   </div>

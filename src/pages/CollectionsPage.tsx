@@ -41,7 +41,7 @@ export const CollectionsPage: React.FC = () => {
       tagline: 'Grand Galas & Evening Royalty',
       description: 'Luminous cascades of brilliant-cut diamonds, heritage antique collars, and temple gold masterpieces designed to grace your collarbone.',
       itemCount: '26 Designs',
-      image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80',
+      image: '/images/collections-necklace.jpg',
       highlight: 'Guild Hallmarked',
     },
     {
@@ -50,7 +50,7 @@ export const CollectionsPage: React.FC = () => {
       tagline: 'Deccan Filigree & South Sea Pearls',
       description: 'From dramatic ballroom chandeliers to timeless 22K temple jhumkas adorned with natural Burmese rubies and pearls.',
       itemCount: '42 Creations',
-      image: 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=800&q=80',
+      image: '/images/collections-earrings.jpg',
       highlight: '22K Solid Gold',
     },
     {
@@ -59,7 +59,7 @@ export const CollectionsPage: React.FC = () => {
       tagline: 'Sovereign 22K Gold Craftsmanship',
       description: 'Nakshi handcrafted broad kadas, floral filigree pairs, and heirloom bangles with precision guild hinge closures.',
       itemCount: '22 Sets',
-      image: 'https://images.unsplash.com/photo-1598560917505-59a3ad559071?auto=format&fit=crop&w=800&q=80',
+      image: '/images/collections-bangles.jpg',
       highlight: 'BIS 916 Hallmark',
     },
     {
@@ -137,8 +137,8 @@ export const CollectionsPage: React.FC = () => {
                     alt={col.title}
                     onError={(e) => {
                       const target = e.currentTarget;
-                      if (!target.src.includes('collections-bracelet.jpg')) {
-                        target.src = '/images/collections-bracelet.jpg';
+                      if (!target.src.includes('collections-')) {
+                        target.src = '/images/collections-necklace.jpg';
                       }
                     }}
                     className="w-full h-full object-cover transform transition-transform duration-700 ease-out group-hover:scale-108"
