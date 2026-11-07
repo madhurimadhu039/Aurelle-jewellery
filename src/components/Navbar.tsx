@@ -112,6 +112,18 @@ export const Navbar: React.FC = () => {
                 )}
               </Link>
 
+              {/* Shopping Bag with Gold Badge */}
+              <Link
+                to="/cart"
+                className="p-1.5 hover:text-[#D8B47A] transition-colors relative"
+                aria-label="Shopping Bag"
+              >
+                <ShoppingBag className="w-[18px] h-[18px] stroke-[1.5]" />
+                <span className="absolute -top-0.5 -right-1 w-4 h-4 bg-[#D8B47A] text-[#090806] text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+                  {cartCount}
+                </span>
+              </Link>
+
               {/* Account Dropdown */}
               <div className="relative">
                 <button
@@ -187,18 +199,6 @@ export const Navbar: React.FC = () => {
                   </div>
                 )}
               </div>
-
-              {/* Shopping Bag with Gold Badge */}
-              <Link
-                to="/cart"
-                className="p-1.5 hover:text-[#D8B47A] transition-colors relative"
-                aria-label="Shopping Bag"
-              >
-                <ShoppingBag className="w-[18px] h-[18px] stroke-[1.5]" />
-                <span className="absolute -top-0.5 -right-1 w-4 h-4 bg-[#D8B47A] text-[#090806] text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
-                  {cartCount}
-                </span>
-              </Link>
 
               {/* Mobile Hamburger */}
               <button
