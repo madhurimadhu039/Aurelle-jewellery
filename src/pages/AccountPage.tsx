@@ -171,12 +171,16 @@ export const AccountPage: React.FC = () => {
             </div>
 
             <div className="bg-[#120F0B] border border-[#2B2319] rounded-2xl p-6 sm:p-8 shadow-2xl">
-              {/* Wordmark */}
-              <div className="text-center mb-6">
-                <span className="font-serif-luxury text-2xl tracking-[0.25em] text-[#F7F1E7] block leading-tight">
-                  AURELLE
-                </span>
-                <span className="text-[9px] uppercase tracking-[0.35em] text-[#D8B47A] block font-medium mt-1">
+              {/* Brand Logo & Wordmark */}
+              <div className="text-center mb-6 flex flex-col items-center">
+                <Link to="/" className="inline-block group mb-1.5" aria-label="Aurelle Home">
+                  <img
+                    src="/images/aurelle-logo.png"
+                    alt="Aurelle Jewellery Logo"
+                    className="h-20 sm:h-24 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
+                  />
+                </Link>
+                <span className="text-[9px] uppercase tracking-[0.35em] text-[#D8B47A] block font-medium">
                   PATRON PORTAL & IDENTITY
                 </span>
               </div>

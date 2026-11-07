@@ -8,16 +8,15 @@ export const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10 lg:gap-14">
           
           {/* Column 1: Logo & Tagline */}
-          <div className="space-y-3">
-            <div>
-              <span className="font-serif-luxury text-2xl font-normal tracking-[0.28em] text-[#F7F1E7] block leading-tight">
-                AURELLE
-              </span>
-              <span className="text-[8px] uppercase tracking-[0.42em] text-[#D8B47A] block font-medium pl-0.5">
-                JEWELLERY
-              </span>
-            </div>
-            <p className="text-[12px] text-[#A69C8E] font-light mt-3">
+          <div className="space-y-4">
+            <Link to="/" className="inline-block group" aria-label="Aurelle Jewellery Home">
+              <img
+                src="/images/aurelle-logo.png"
+                alt="Aurelle Jewellery"
+                className="h-20 sm:h-24 w-auto object-contain transition-opacity duration-200 group-hover:opacity-90"
+              />
+            </Link>
+            <p className="text-[12px] text-[#A69C8E] font-light">
               Timeless Elegance. Always.
             </p>
           </div>

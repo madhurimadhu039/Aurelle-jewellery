@@ -52,13 +52,12 @@ export const Navbar: React.FC = () => {
             
             {/* Left: Brand Logo & Wordmark */}
             <div className="flex-shrink-0">
-              <Link to="/" className="inline-block group text-left">
-                <span className="font-serif-luxury text-2xl sm:text-[26px] font-normal tracking-[0.28em] text-[#F7F1E7] block leading-tight">
-                  AURELLE
-                </span>
-                <span className="text-[8px] uppercase tracking-[0.42em] text-[#D8B47A] block font-medium pl-0.5">
-                  JEWELLERY
-                </span>
+              <Link to="/" className="inline-flex items-center group py-1" aria-label="Aurelle Jewellery Home">
+                <img
+                  src="/images/aurelle-logo-horizontal.png"
+                  alt="Aurelle Jewellery"
+                  className="h-10 sm:h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-102"
+                />
               </Link>
             </div>
 
@@ -239,6 +238,13 @@ export const Navbar: React.FC = () => {
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-[#1C1712] bg-[#090806] px-6 py-5 space-y-3 text-left">
+            <div className="pb-3 border-b border-[#18140F]">
+              <img
+                src="/images/aurelle-logo-horizontal.png"
+                alt="Aurelle Jewellery"
+                className="h-9 w-auto object-contain"
+              />
+            </div>
             {navLinks.map((link) => (
               <Link
                 key={link.label}
@@ -264,7 +270,7 @@ export const Navbar: React.FC = () => {
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#090806]/95 backdrop-blur-md border-t border-[#262018] px-4 py-2">
         <div className="flex items-center justify-around text-[10px] uppercase font-medium tracking-wider text-[#A1998E]">
           <Link to="/" className={`flex flex-col items-center gap-0.5 ${location.pathname === '/' ? 'text-[#D8B47A]' : ''}`}>
-            <span className="text-sm">✦</span>
+            <img src="/images/aurelle-emblem.png" alt="Home" className="w-4 h-4 object-contain" />
             <span>Home</span>
           </Link>
           <Link to="/collections" className={`flex flex-col items-center gap-0.5 ${location.pathname.startsWith('/collections') ? 'text-[#D8B47A]' : ''}`}>

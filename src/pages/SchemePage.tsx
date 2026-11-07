@@ -881,10 +881,12 @@ export const SchemePage: React.FC = () => {
             <div id="aurelle-printable-receipt" className="space-y-5 sm:space-y-6">
               
               {/* Header Crest */}
-              <div className="text-center pb-4 border-b border-[#2B2319] space-y-1">
-                <span className="font-serif-luxury text-xl sm:text-2xl font-normal tracking-[0.25em] text-[#F7F1E7] block">
-                  AURELLE
-                </span>
+              <div className="text-center pb-4 border-b border-[#2B2319] space-y-1 flex flex-col items-center">
+                <img
+                  src="/images/aurelle-logo.png"
+                  alt="Aurelle Logo"
+                  className="h-16 sm:h-20 w-auto object-contain mb-1"
+                />
                 <span className="text-[8px] uppercase tracking-[0.4em] text-[#D8B47A] block font-medium">
                   JEWELLERY &bull; BULLION TREASURY
                 </span>
